@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { COLORS } from '../constants';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface ProgressRingProps {
   progress: number;
@@ -18,9 +20,24 @@ export function ProgressRing({
   currentAmount,
   goalAmount,
 }: ProgressRingProps) {
+  const animatedProgress = useRef(new Animated.Value(0)).current;
+
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (Math.min(progress, 100) / 100) * circumference;
+
+  useEffect(() => {
+    Animated.timing(animatedProgress, {
+      toValue: Math.min(progress, 100),
+      duration: 600,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false, // strokeDashoffset doesn't support native driver
+    }).start();
+  }, [progress, animatedProgress]);
+
+  const strokeDashoffset = animatedProgress.interpolate({
+    inputRange: [0, 100],
+    outputRange: [circumference, 0],
+  });
 
   return (
     <View style={styles.container}>
@@ -35,7 +52,7 @@ export function ProgressRing({
           fill="none"
         />
         {/* Progress circle */}
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={radius}

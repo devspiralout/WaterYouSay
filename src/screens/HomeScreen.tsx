@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { ProgressRing } from '../components/ProgressRing';
 import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { IntakeLog } from '../components/IntakeLog';
 import { WaterBackground } from '../components/WaterBackground';
+import { CelebrationSplash } from '../components/CelebrationSplash';
 import { COLORS } from '../constants';
 import { calculateProgress, calculateStreak } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
@@ -22,11 +23,24 @@ export function HomeScreen() {
   const { state, addWater, removeEntry, setUnitSystem } = useWater();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
+  const [showCelebration, setShowCelebration] = useState(false);
+  const hasShownCelebration = useRef(false);
 
   const { todayLog, settings, history } = state;
   const progress = calculateProgress(todayLog.totalMl, settings.dailyGoalMl);
   const streak = calculateStreak(history, settings.dailyGoalMl, todayLog.totalMl);
   const quickAddAmounts = getQuickAddAmounts(settings.unitSystem);
+
+  // Show celebration when goal is reached for the first time today
+  useEffect(() => {
+    if (progress >= 100 && !hasShownCelebration.current) {
+      hasShownCelebration.current = true;
+      setShowCelebration(true);
+    } else if (progress < 100) {
+      // Reset if progress drops below 100 (e.g., removed entries)
+      hasShownCelebration.current = false;
+    }
+  }, [progress]);
 
   const handleQuickAdd = (amountMl: number) => {
     addWater(amountMl);
@@ -53,9 +67,9 @@ export function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Today</Text>
-          {streak > 0 && (
-            <Text style={styles.streakText}>{streak} day streak</Text>
-          )}
+          <Text style={[styles.streakText, { opacity: streak > 0 ? 1 : 0 }]}>
+            {streak > 0 ? `${streak} day streak` : ' '}
+          </Text>
         </View>
         <TouchableOpacity onPress={toggleUnits} style={styles.unitToggle}>
           <Text style={styles.unitToggleText}>
@@ -151,6 +165,12 @@ export function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Celebration Animation - rendered last to overlay everything */}
+      <CelebrationSplash
+        visible={showCelebration}
+        onDismiss={() => setShowCelebration(false)}
+      />
     </SafeAreaView>
   );
 }
