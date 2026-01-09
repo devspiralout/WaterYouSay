@@ -8,6 +8,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Wave cycle width - the animation will translate by this amount for seamless loop
 const WAVE_CYCLE = 120;
 const SVG_WIDTH = SCREEN_WIDTH + WAVE_CYCLE * 2;
+const SVG_HEIGHT = SCREEN_HEIGHT + 30;
 
 interface WaterBackgroundProps {
   progress: number; // 0-100
@@ -16,12 +17,22 @@ interface WaterBackgroundProps {
 export function WaterBackground({ progress }: WaterBackgroundProps) {
   const waveAnim1 = useRef(new Animated.Value(0)).current;
   const waveAnim2 = useRef(new Animated.Value(0)).current;
+  const riseAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   // Clamp progress between 0 and 100
   const clampedProgress = Math.min(Math.max(progress, 0), 100);
 
-  // Calculate water height (inverted - 0% = bottom, 100% = top)
-  const waterHeight = (clampedProgress / 100) * SCREEN_HEIGHT;
+  // Animate water level smoothly when progress changes
+  useEffect(() => {
+    // Calculate how far down the water should be (0% = at bottom/SCREEN_HEIGHT, 100% = at top/0)
+    const targetY = SCREEN_HEIGHT - (clampedProgress / 100) * SCREEN_HEIGHT;
+    Animated.timing(riseAnim, {
+      toValue: targetY,
+      duration: 600,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [clampedProgress, riseAnim]);
 
   useEffect(() => {
     // First wave - moves right
@@ -54,7 +65,7 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
   }, [waveAnim1, waveAnim2]);
 
   // Wave path generator - creates a repeating wave pattern
-  const createWavePath = (offset: number, svgHeight: number) => {
+  const createWavePath = (offset: number) => {
     const amplitude = 10;
     const wavelength = WAVE_CYCLE;
     let path = `M 0 ${amplitude}`;
@@ -64,12 +75,11 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
       path += ` L ${x} ${y + amplitude}`;
     }
 
-    path += ` L ${SVG_WIDTH} ${svgHeight} L 0 ${svgHeight} Z`;
+    path += ` L ${SVG_WIDTH} ${SVG_HEIGHT} L 0 ${SVG_HEIGHT} Z`;
     return path;
   };
 
   // Both waves move in the same direction (right) by translating from -WAVE_CYCLE to 0
-  // This creates seamless looping since the wave pattern repeats every WAVE_CYCLE pixels
   const translateX1 = waveAnim1.interpolate({
     inputRange: [0, 1],
     outputRange: [-WAVE_CYCLE, 0],
@@ -80,28 +90,22 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
     outputRange: [-WAVE_CYCLE, 0],
   });
 
-  const wave1Height = waterHeight + 25;
-  const wave2Height = waterHeight + 18;
-
   return (
     <View style={styles.container} pointerEvents="none">
       <Animated.View
         style={[
           styles.waterContainer,
           {
-            height: wave1Height,
-            bottom: 0,
-            transform: [{ translateX: translateX1 }],
+            transform: [
+              { translateY: riseAnim },
+              { translateX: translateX1 },
+            ],
           },
         ]}
       >
-        <Svg
-          width={SVG_WIDTH}
-          height={wave1Height}
-          style={styles.wave}
-        >
+        <Svg width={SVG_WIDTH} height={SVG_HEIGHT}>
           <Path
-            d={createWavePath(0, wave1Height)}
+            d={createWavePath(0)}
             fill={clampedProgress >= 100 ? COLORS.success + '25' : COLORS.primary + '15'}
           />
         </Svg>
@@ -111,20 +115,18 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
       <Animated.View
         style={[
           styles.waterContainer,
+          styles.wave2Offset,
           {
-            height: wave2Height,
-            bottom: 0,
-            transform: [{ translateX: translateX2 }],
+            transform: [
+              { translateY: riseAnim },
+              { translateX: translateX2 },
+            ],
           },
         ]}
       >
-        <Svg
-          width={SVG_WIDTH}
-          height={wave2Height}
-          style={styles.wave}
-        >
+        <Svg width={SVG_WIDTH} height={SVG_HEIGHT}>
           <Path
-            d={createWavePath(Math.PI / 3, wave2Height)}
+            d={createWavePath(Math.PI / 3)}
             fill={clampedProgress >= 100 ? COLORS.success + '18' : COLORS.primary + '10'}
           />
         </Svg>
@@ -141,9 +143,9 @@ const styles = StyleSheet.create({
   waterContainer: {
     position: 'absolute',
     left: -WAVE_CYCLE,
-  },
-  wave: {
-    position: 'absolute',
     top: 0,
+  },
+  wave2Offset: {
+    top: 7, // Slight offset for second wave
   },
 });
