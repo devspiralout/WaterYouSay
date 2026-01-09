@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
 import { ActivityLevel, Sex, UserProfile } from '../types';
 import { COLORS, ACTIVITY_LEVELS, DEFAULT_DAILY_GOAL_ML } from '../constants';
-import { calculateDailyWaterGoal } from '../utils/calculations';
+import { calculateDailyWaterGoal, getCalculationBreakdown } from '../utils/calculations';
 import { mlToDisplay } from '../utils/units';
 
 type OnboardingMode = 'choice' | 'calculated' | 'manual';
@@ -62,6 +62,18 @@ export function OnboardingScreen() {
     };
     const goal = calculateDailyWaterGoal(profile);
     return mlToDisplay(goal, state.settings.unitSystem);
+  };
+
+  const getBreakdown = () => {
+    if (!isCalculatedFormValid()) return null;
+    const profile: UserProfile = {
+      age: parseInt(age, 10),
+      sex,
+      weightKg: parseFloat(weight),
+      activityLevel,
+      useCalculatedGoal: true,
+    };
+    return getCalculationBreakdown(profile);
   };
 
   if (mode === 'choice') {
@@ -258,9 +270,51 @@ export function OnboardingScreen() {
             </View>
 
             {isCalculatedFormValid() && (
-              <View style={styles.resultCard}>
-                <Text style={styles.resultLabel}>Recommended daily intake</Text>
-                <Text style={styles.resultValue}>{getPreviewGoal()}</Text>
+              <View style={styles.resultSection}>
+                <View style={styles.resultCard}>
+                  <Text style={styles.resultLabel}>Recommended daily intake</Text>
+                  <Text style={styles.resultValue}>{getPreviewGoal()}</Text>
+                </View>
+
+                {/* Calculation Breakdown */}
+                <View style={styles.breakdownCard}>
+                  <Text style={styles.breakdownTitle}>How we calculated this</Text>
+                  {(() => {
+                    const breakdown = getBreakdown();
+                    if (!breakdown) return null;
+                    return (
+                      <View style={styles.breakdownList}>
+                        <View style={styles.breakdownRow}>
+                          <Text style={styles.breakdownLabel}>Base ({weight}kg × 33ml)</Text>
+                          <Text style={styles.breakdownValue}>{breakdown.baseAmount}ml</Text>
+                        </View>
+                        {breakdown.sexAdjustment !== 'none' && (
+                          <View style={styles.breakdownRow}>
+                            <Text style={styles.breakdownLabel}>Sex adjustment</Text>
+                            <Text style={styles.breakdownValue}>{breakdown.sexAdjustment}</Text>
+                          </View>
+                        )}
+                        {breakdown.ageAdjustment !== 'none' && (
+                          <View style={styles.breakdownRow}>
+                            <Text style={styles.breakdownLabel}>Age adjustment</Text>
+                            <Text style={styles.breakdownValue}>{breakdown.ageAdjustment}</Text>
+                          </View>
+                        )}
+                        <View style={styles.breakdownRow}>
+                          <Text style={styles.breakdownLabel}>Activity level</Text>
+                          <Text style={styles.breakdownValue}>{breakdown.activityLabel}</Text>
+                        </View>
+                      </View>
+                    );
+                  })()}
+                </View>
+
+                {/* Disclaimer */}
+                <Text style={styles.disclaimer}>
+                  This is a general guideline based on common recommendations, not medical advice.
+                  Individual needs vary based on climate, health conditions, and other factors.
+                  Listen to your body and consult a healthcare provider if needed.
+                </Text>
               </View>
             )}
           </View>
@@ -486,13 +540,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
   },
+  resultSection: {
+    gap: 16,
+    marginTop: 8,
+  },
   resultCard: {
     backgroundColor: COLORS.primary + '10',
     paddingVertical: 24,
     paddingHorizontal: 20,
     borderRadius: 16,
     alignItems: 'center',
-    marginTop: 8,
   },
   resultLabel: {
     fontSize: 14,
@@ -504,6 +561,43 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: COLORS.primary,
     letterSpacing: -1,
+  },
+  breakdownCard: {
+    backgroundColor: COLORS.surface,
+    padding: 16,
+    borderRadius: 12,
+  },
+  breakdownTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  breakdownList: {
+    gap: 8,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  breakdownLabel: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+  },
+  breakdownValue: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  disclaimer: {
+    fontSize: 13,
+    color: COLORS.textTertiary,
+    lineHeight: 18,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
   footer: {
     paddingHorizontal: 24,

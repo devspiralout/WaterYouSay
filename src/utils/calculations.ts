@@ -1,6 +1,15 @@
 import { UserProfile, ActivityLevel, Sex } from '../types';
 import { ACTIVITY_MULTIPLIERS } from '../constants';
 
+export interface CalculationBreakdown {
+  baseAmount: number;
+  sexAdjustment: string;
+  ageAdjustment: string;
+  activityMultiplier: number;
+  activityLabel: string;
+  finalAmount: number;
+}
+
 /**
  * Calculate recommended daily water intake in milliliters
  * Based on weight, age, sex, and activity level
@@ -30,6 +39,46 @@ export function calculateDailyWaterGoal(profile: UserProfile): number {
 
   // Round to nearest 50ml
   return Math.round(baseMl / 50) * 50;
+}
+
+/**
+ * Get a breakdown of the calculation for display
+ */
+export function getCalculationBreakdown(profile: UserProfile): CalculationBreakdown {
+  const { weightKg, age, sex, activityLevel } = profile;
+
+  const baseAmount = Math.round(weightKg * 33);
+
+  let sexAdjustment = 'none';
+  if (sex === 'male') {
+    sexAdjustment = '+10%';
+  }
+
+  let ageAdjustment = 'none';
+  if (age >= 60) {
+    ageAdjustment = '-10%';
+  } else if (age >= 50) {
+    ageAdjustment = '-5%';
+  }
+
+  const activityMultiplier = ACTIVITY_MULTIPLIERS[activityLevel];
+
+  const activityLabels: Record<ActivityLevel, string> = {
+    sedentary: 'Sedentary (×1.0)',
+    light: 'Light (×1.12)',
+    moderate: 'Moderate (×1.25)',
+    active: 'Active (×1.37)',
+    very_active: 'Very Active (×1.5)',
+  };
+
+  return {
+    baseAmount,
+    sexAdjustment,
+    ageAdjustment,
+    activityMultiplier,
+    activityLabel: activityLabels[activityLevel],
+    finalAmount: calculateDailyWaterGoal(profile),
+  };
 }
 
 /**

@@ -14,6 +14,7 @@ import { useWater } from '../context/WaterContext';
 import { COLORS, ACTIVITY_LEVELS } from '../constants';
 import { mlToDisplay, formatWeight } from '../utils/units';
 import { clearAllData } from '../utils/storage';
+import { getCalculationBreakdown } from '../utils/calculations';
 
 export function SettingsScreen() {
   const { state, setDailyGoal, setUnitSystem, resetOnboarding } = useWater();
@@ -154,6 +155,54 @@ export function SettingsScreen() {
                 </View>
               </View>
             </View>
+          </View>
+        )}
+
+        {/* Calculation Breakdown */}
+        {profile && profile.useCalculatedGoal && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>HOW YOUR GOAL IS CALCULATED</Text>
+            <View style={styles.breakdownCard}>
+              {(() => {
+                const breakdown = getCalculationBreakdown(profile);
+                return (
+                  <View style={styles.breakdownList}>
+                    <View style={styles.breakdownRow}>
+                      <Text style={styles.breakdownLabel}>
+                        Base ({profile.weightKg}kg × 33ml)
+                      </Text>
+                      <Text style={styles.breakdownValue}>{breakdown.baseAmount}ml</Text>
+                    </View>
+                    {breakdown.sexAdjustment !== 'none' && (
+                      <View style={styles.breakdownRow}>
+                        <Text style={styles.breakdownLabel}>Sex adjustment</Text>
+                        <Text style={styles.breakdownValue}>{breakdown.sexAdjustment}</Text>
+                      </View>
+                    )}
+                    {breakdown.ageAdjustment !== 'none' && (
+                      <View style={styles.breakdownRow}>
+                        <Text style={styles.breakdownLabel}>Age adjustment</Text>
+                        <Text style={styles.breakdownValue}>{breakdown.ageAdjustment}</Text>
+                      </View>
+                    )}
+                    <View style={styles.breakdownRow}>
+                      <Text style={styles.breakdownLabel}>Activity level</Text>
+                      <Text style={styles.breakdownValue}>{breakdown.activityLabel}</Text>
+                    </View>
+                    <View style={[styles.breakdownRow, styles.breakdownTotal]}>
+                      <Text style={styles.breakdownTotalLabel}>Recommended</Text>
+                      <Text style={styles.breakdownTotalValue}>
+                        {mlToDisplay(breakdown.finalAmount, settings.unitSystem)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
+            </View>
+            <Text style={styles.disclaimer}>
+              This is a general guideline based on common recommendations, not medical advice.
+              Individual needs vary based on climate, health conditions, and other factors.
+            </Text>
           </View>
         )}
 
@@ -322,6 +371,51 @@ const styles = StyleSheet.create({
   profileLabel: {
     fontSize: 14,
     color: COLORS.textSecondary,
+  },
+  breakdownCard: {
+    backgroundColor: COLORS.surface,
+    padding: 16,
+    borderRadius: 14,
+  },
+  breakdownList: {
+    gap: 10,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  breakdownLabel: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+  },
+  breakdownValue: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  breakdownTotal: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  breakdownTotalLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  breakdownTotalValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  disclaimer: {
+    fontSize: 13,
+    color: COLORS.textTertiary,
+    lineHeight: 18,
+    marginTop: 12,
+    paddingHorizontal: 4,
   },
   dangerText: {
     fontSize: 17,
