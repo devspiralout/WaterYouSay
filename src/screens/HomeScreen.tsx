@@ -13,6 +13,7 @@ import { useWater } from '../context/WaterContext';
 import { ProgressRing } from '../components/ProgressRing';
 import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { IntakeLog } from '../components/IntakeLog';
+import { WaterBackground } from '../components/WaterBackground';
 import { COLORS } from '../constants';
 import { calculateProgress, calculateStreak } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
@@ -46,6 +47,7 @@ export function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <WaterBackground progress={progress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -90,11 +92,13 @@ export function HomeScreen() {
 
         {/* Today's Log */}
         <View style={styles.logContainer}>
-          <IntakeLog
-            entries={todayLog.entries}
-            unitSystem={settings.unitSystem}
-            onRemoveEntry={removeEntry}
-          />
+          <View style={styles.logCard}>
+            <IntakeLog
+              entries={todayLog.entries}
+              unitSystem={settings.unitSystem}
+              onRemoveEntry={removeEntry}
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -204,6 +208,18 @@ const styles = StyleSheet.create({
   },
   logContainer: {
     flex: 1,
+  },
+  logCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   modalOverlay: {
     flex: 1,
