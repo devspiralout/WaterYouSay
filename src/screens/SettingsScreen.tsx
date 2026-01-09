@@ -214,12 +214,6 @@ export function SettingsScreen() {
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         </View>
-
-        {/* About */}
-        <View style={styles.aboutSection}>
-          <Text style={styles.appName}>WaterYouSay?</Text>
-          <Text style={styles.version}>Version 1.0.0</Text>
-        </View>
       </ScrollView>
 
       {/* Edit Goal Modal */}

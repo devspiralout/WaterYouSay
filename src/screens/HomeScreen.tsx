@@ -18,6 +18,7 @@ import { CelebrationSplash } from '../components/CelebrationSplash';
 import { COLORS } from '../constants';
 import { calculateProgress, calculateStreak } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
+import { mediumTap, successFeedback, warningFeedback } from '../utils/haptics';
 
 export function HomeScreen() {
   const { state, addWater, removeEntry, setUnitSystem } = useWater();
@@ -35,6 +36,7 @@ export function HomeScreen() {
   useEffect(() => {
     if (progress >= 100 && !hasShownCelebration.current) {
       hasShownCelebration.current = true;
+      successFeedback();
       setShowCelebration(true);
     } else if (progress < 100) {
       // Reset if progress drops below 100 (e.g., removed entries)
@@ -43,16 +45,23 @@ export function HomeScreen() {
   }, [progress]);
 
   const handleQuickAdd = (amountMl: number) => {
+    mediumTap();
     addWater(amountMl);
   };
 
   const handleCustomAdd = () => {
     const amount = parseInt(customAmount, 10);
     if (amount > 0) {
+      mediumTap();
       addWater(amount);
       setCustomAmount('');
       setCustomModalVisible(false);
     }
+  };
+
+  const handleRemoveEntry = (entryId: string) => {
+    warningFeedback();
+    removeEntry(entryId);
   };
 
   const toggleUnits = () => {
@@ -111,7 +120,7 @@ export function HomeScreen() {
             <IntakeLog
               entries={todayLog.entries}
               unitSystem={settings.unitSystem}
-              onRemoveEntry={removeEntry}
+              onRemoveEntry={handleRemoveEntry}
             />
           </View>
         </View>
