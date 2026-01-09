@@ -4,7 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { COLORS } from '../constants';
 
 interface ProgressRingProps {
-  progress: number; // 0-100
+  progress: number;
   size?: number;
   strokeWidth?: number;
   currentAmount: string;
@@ -13,14 +13,14 @@ interface ProgressRingProps {
 
 export function ProgressRing({
   progress,
-  size = 220,
-  strokeWidth = 15,
+  size = 280,
+  strokeWidth = 8,
   currentAmount,
   goalAmount,
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const strokeDashoffset = circumference - (Math.min(progress, 100) / 100) * circumference;
 
   return (
     <View style={styles.container}>
@@ -50,9 +50,10 @@ export function ProgressRing({
       </Svg>
       <View style={[styles.textContainer, { width: size, height: size }]}>
         <Text style={styles.currentAmount}>{currentAmount}</Text>
-        <Text style={styles.separator}>of</Text>
-        <Text style={styles.goalAmount}>{goalAmount}</Text>
-        <Text style={styles.percentage}>{Math.round(progress)}%</Text>
+        <View style={styles.goalContainer}>
+          <Text style={styles.goalLabel}>of </Text>
+          <Text style={styles.goalAmount}>{goalAmount}</Text>
+        </View>
       </View>
     </View>
   );
@@ -71,23 +72,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   currentAmount: {
-    fontSize: 36,
-    fontWeight: 'bold',
+    fontSize: 56,
+    fontWeight: '200',
     color: COLORS.text,
+    letterSpacing: -2,
   },
-  separator: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginVertical: 2,
+  goalContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 4,
+  },
+  goalLabel: {
+    fontSize: 15,
+    fontWeight: '400',
+    color: COLORS.textTertiary,
   },
   goalAmount: {
-    fontSize: 18,
-    color: COLORS.textLight,
-  },
-  percentage: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
-    marginTop: 8,
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
   },
 });

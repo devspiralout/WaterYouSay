@@ -1,18 +1,33 @@
 import { ActivityLevel } from '../types';
 
 export const COLORS = {
-  primary: '#4A90D9',
-  primaryLight: '#7AB3E8',
-  primaryDark: '#2E6AAB',
-  secondary: '#5DADE2',
-  background: '#F5F9FC',
+  // Refined minimalist palette
+  primary: '#0A84FF',
+  primaryMuted: '#B4D4FF',
+  accent: '#32D74B',
+
+  // Backgrounds
+  background: '#FAFAFA',
   surface: '#FFFFFF',
-  text: '#2C3E50',
-  textLight: '#7F8C8D',
-  success: '#27AE60',
-  warning: '#F39C12',
-  error: '#E74C3C',
-  border: '#E0E6ED',
+  surfaceElevated: '#FFFFFF',
+
+  // Typography
+  text: '#1C1C1E',
+  textSecondary: '#8E8E93',
+  textTertiary: '#AEAEB2',
+
+  // Semantic
+  success: '#32D74B',
+  warning: '#FF9F0A',
+  error: '#FF453A',
+
+  // Borders & Dividers
+  border: '#F2F2F7',
+  divider: '#E5E5EA',
+
+  // Special
+  streak: '#FF9F0A',
+  water: '#0A84FF',
 };
 
 export const ACTIVITY_LEVELS: { value: ActivityLevel; label: string; description: string }[] = [

@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
 import { COLORS, ACTIVITY_LEVELS } from '../constants';
 import { mlToDisplay, formatWeight } from '../utils/units';
-import { calculateDailyWaterGoal } from '../utils/calculations';
 import { clearAllData } from '../utils/storage';
 
 export function SettingsScreen() {
@@ -57,22 +56,27 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.title}>Settings</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Settings</Text>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Daily Goal Section */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Daily Goal */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Daily Goal</Text>
+          <Text style={styles.sectionTitle}>GOAL</Text>
           <TouchableOpacity
-            style={styles.settingItem}
+            style={styles.settingRow}
             onPress={() => {
               setNewGoal(settings.dailyGoalMl.toString());
               setGoalModalVisible(true);
             }}
           >
-            <Text style={styles.settingLabel}>Target Intake</Text>
-            <View style={styles.settingValue}>
-              <Text style={styles.settingValueText}>
+            <Text style={styles.settingLabel}>Daily Target</Text>
+            <View style={styles.settingRight}>
+              <Text style={styles.settingValue}>
                 {mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
               </Text>
               <Text style={styles.chevron}>›</Text>
@@ -80,23 +84,23 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Units Section */}
+        {/* Units */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Units</Text>
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>Measurement System</Text>
-            <View style={styles.unitToggle}>
+          <Text style={styles.sectionTitle}>UNITS</Text>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Measurement</Text>
+            <View style={styles.segmentedControl}>
               <TouchableOpacity
                 style={[
-                  styles.unitOption,
-                  settings.unitSystem === 'metric' && styles.unitOptionActive,
+                  styles.segment,
+                  settings.unitSystem === 'metric' && styles.segmentActive,
                 ]}
                 onPress={() => setUnitSystem('metric')}
               >
                 <Text
                   style={[
-                    styles.unitOptionText,
-                    settings.unitSystem === 'metric' && styles.unitOptionTextActive,
+                    styles.segmentText,
+                    settings.unitSystem === 'metric' && styles.segmentTextActive,
                   ]}
                 >
                   Metric
@@ -104,15 +108,15 @@ export function SettingsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
-                  styles.unitOption,
-                  settings.unitSystem === 'imperial' && styles.unitOptionActive,
+                  styles.segment,
+                  settings.unitSystem === 'imperial' && styles.segmentActive,
                 ]}
                 onPress={() => setUnitSystem('imperial')}
               >
                 <Text
                   style={[
-                    styles.unitOptionText,
-                    settings.unitSystem === 'imperial' && styles.unitOptionTextActive,
+                    styles.segmentText,
+                    settings.unitSystem === 'imperial' && styles.segmentTextActive,
                   ]}
                 >
                   Imperial
@@ -122,64 +126,50 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        {/* Profile Section */}
+        {/* Profile */}
         {profile && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Profile</Text>
+            <Text style={styles.sectionTitle}>PROFILE</Text>
             <View style={styles.profileCard}>
-              <View style={styles.profileRow}>
-                <Text style={styles.profileLabel}>Age</Text>
-                <Text style={styles.profileValue}>{profile.age} years</Text>
-              </View>
-              <View style={styles.profileRow}>
-                <Text style={styles.profileLabel}>Sex</Text>
-                <Text style={styles.profileValue}>
-                  {profile.sex.charAt(0).toUpperCase() + profile.sex.slice(1)}
-                </Text>
-              </View>
-              <View style={styles.profileRow}>
-                <Text style={styles.profileLabel}>Weight</Text>
-                <Text style={styles.profileValue}>
-                  {formatWeight(profile.weightKg, settings.unitSystem)}
-                </Text>
-              </View>
-              <View style={styles.profileRow}>
-                <Text style={styles.profileLabel}>Activity Level</Text>
-                <Text style={styles.profileValue}>{getActivityLabel()}</Text>
-              </View>
-              {profile.useCalculatedGoal && (
-                <View style={styles.calculatedNote}>
-                  <Text style={styles.calculatedNoteText}>
-                    Your goal is calculated based on this profile
-                  </Text>
+              <View style={styles.profileGrid}>
+                <View style={styles.profileItem}>
+                  <Text style={styles.profileValue}>{profile.age}</Text>
+                  <Text style={styles.profileLabel}>Age</Text>
                 </View>
-              )}
+                <View style={styles.profileItem}>
+                  <Text style={styles.profileValue}>
+                    {profile.sex.charAt(0).toUpperCase() + profile.sex.slice(1)}
+                  </Text>
+                  <Text style={styles.profileLabel}>Sex</Text>
+                </View>
+                <View style={styles.profileItem}>
+                  <Text style={styles.profileValue}>
+                    {formatWeight(profile.weightKg, settings.unitSystem)}
+                  </Text>
+                  <Text style={styles.profileLabel}>Weight</Text>
+                </View>
+                <View style={styles.profileItem}>
+                  <Text style={styles.profileValue}>{getActivityLabel()}</Text>
+                  <Text style={styles.profileLabel}>Activity</Text>
+                </View>
+              </View>
             </View>
           </View>
         )}
 
-        {/* Data Section */}
+        {/* Data */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Data</Text>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={handleResetData}
-          >
-            <Text style={[styles.settingLabel, { color: COLORS.error }]}>
-              Reset All Data
-            </Text>
+          <Text style={styles.sectionTitle}>DATA</Text>
+          <TouchableOpacity style={styles.settingRow} onPress={handleResetData}>
+            <Text style={styles.dangerText}>Reset All Data</Text>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         </View>
 
-        {/* About Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <View style={styles.aboutCard}>
-            <Text style={styles.appName}>WaterYouSay?</Text>
-            <Text style={styles.version}>Version 1.0.0</Text>
-            <Text style={styles.tagline}>Stay hydrated, stay healthy!</Text>
-          </View>
+        {/* About */}
+        <View style={styles.aboutSection}>
+          <Text style={styles.appName}>WaterYouSay?</Text>
+          <Text style={styles.version}>Version 1.0.0</Text>
         </View>
       </ScrollView>
 
@@ -192,13 +182,15 @@ export function SettingsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Daily Goal</Text>
-            <View style={styles.goalInputContainer}>
+            <Text style={styles.modalTitle}>Daily Goal</Text>
+            <View style={styles.goalInputWrapper}>
               <TextInput
                 style={styles.goalInput}
                 value={newGoal}
                 onChangeText={setNewGoal}
                 keyboardType="numeric"
+                placeholder="2500"
+                placeholderTextColor={COLORS.textTertiary}
                 autoFocus
               />
               <Text style={styles.goalUnit}>ml</Text>
@@ -229,173 +221,171 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontWeight: '700',
     color: COLORS.text,
-    padding: 20,
-    paddingBottom: 10,
+    letterSpacing: -0.5,
   },
   scrollContent: {
-    padding: 20,
-    paddingTop: 10,
+    paddingHorizontal: 24,
     paddingBottom: 40,
   },
   section: {
-    marginBottom: 28,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textLight,
-    textTransform: 'uppercase',
+    color: COLORS.textSecondary,
     letterSpacing: 0.5,
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  settingItem: {
+  settingRow: {
     backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   settingLabel: {
-    fontSize: 16,
+    fontSize: 17,
     color: COLORS.text,
   },
-  settingValue: {
+  settingRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  settingValueText: {
-    fontSize: 16,
-    color: COLORS.primary,
-    fontWeight: '600',
+  settingValue: {
+    fontSize: 17,
+    color: COLORS.textSecondary,
   },
   chevron: {
     fontSize: 20,
-    color: COLORS.textLight,
+    color: COLORS.textTertiary,
+    fontWeight: '300',
   },
-  unitToggle: {
+  segmentedControl: {
     flexDirection: 'row',
     backgroundColor: COLORS.background,
-    borderRadius: 8,
-    padding: 2,
+    borderRadius: 10,
+    padding: 3,
   },
-  unitOption: {
+  segment: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 6,
+    borderRadius: 8,
   },
-  unitOptionActive: {
-    backgroundColor: COLORS.primary,
+  segmentActive: {
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  unitOptionText: {
+  segmentText: {
     fontSize: 14,
-    color: COLORS.text,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
   },
-  unitOptionTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+  segmentTextActive: {
+    color: COLORS.text,
   },
   profileCard: {
     backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 14,
   },
-  profileRow: {
+  profileGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    flexWrap: 'wrap',
   },
-  profileLabel: {
-    fontSize: 15,
-    color: COLORS.textLight,
+  profileItem: {
+    width: '50%',
+    paddingVertical: 12,
   },
   profileValue: {
-    fontSize: 15,
+    fontSize: 17,
+    fontWeight: '600',
     color: COLORS.text,
-    fontWeight: '500',
+    marginBottom: 4,
   },
-  calculatedNote: {
-    marginTop: 12,
-    padding: 10,
-    backgroundColor: COLORS.primary + '15',
-    borderRadius: 8,
+  profileLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
   },
-  calculatedNoteText: {
-    fontSize: 13,
-    color: COLORS.primary,
-    textAlign: 'center',
+  dangerText: {
+    fontSize: 17,
+    color: COLORS.error,
   },
-  aboutCard: {
-    backgroundColor: COLORS.surface,
-    padding: 24,
-    borderRadius: 12,
+  aboutSection: {
     alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 40,
   },
   appName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    fontSize: 17,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   version: {
     fontSize: 14,
-    color: COLORS.textLight,
+    color: COLORS.textTertiary,
     marginTop: 4,
-  },
-  tagline: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginTop: 8,
-    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   modalContent: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 20,
+    padding: 28,
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 320,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: COLORS.text,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    letterSpacing: -0.3,
   },
-  goalInputContainer: {
+  goalInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 28,
   },
   goalInput: {
     backgroundColor: COLORS.background,
-    padding: 14,
-    borderRadius: 10,
-    fontSize: 24,
-    fontWeight: '600',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    fontSize: 32,
+    fontWeight: '300',
     textAlign: 'center',
-    width: 150,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    width: 140,
+    color: COLORS.text,
   },
   goalUnit: {
-    fontSize: 20,
-    color: COLORS.textLight,
+    fontSize: 18,
+    color: COLORS.textTertiary,
+    fontWeight: '500',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -403,26 +393,26 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 14,
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
   modalCancelText: {
-    fontSize: 16,
-    color: COLORS.textLight,
+    fontSize: 17,
+    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   modalSaveButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 14,
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.text,
   },
   modalSaveText: {
-    fontSize: 16,
-    color: '#FFFFFF',
+    fontSize: 17,
+    color: COLORS.surface,
     fontWeight: '600',
   },
 });

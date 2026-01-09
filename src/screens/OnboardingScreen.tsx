@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
 import { ActivityLevel, Sex, UserProfile } from '../types';
 import { COLORS, ACTIVITY_LEVELS, DEFAULT_DAILY_GOAL_ML } from '../constants';
@@ -21,13 +22,10 @@ export function OnboardingScreen() {
   const { setProfile, setDailyGoal, completeOnboarding, state } = useWater();
   const [mode, setMode] = useState<OnboardingMode>('choice');
 
-  // Calculated goal form state
   const [age, setAge] = useState('');
   const [sex, setSex] = useState<Sex>('male');
   const [weight, setWeight] = useState('');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderate');
-
-  // Manual goal state
   const [manualGoal, setManualGoal] = useState(DEFAULT_DAILY_GOAL_ML.toString());
 
   const handleCalculatedSubmit = () => {
@@ -68,202 +66,217 @@ export function OnboardingScreen() {
 
   if (mode === 'choice') {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>WaterYouSay?</Text>
-          <Text style={styles.subtitle}>Let's set your daily water goal</Text>
-        </View>
-
-        <View style={styles.choiceContainer}>
-          <TouchableOpacity
-            style={styles.choiceCard}
-            onPress={() => setMode('calculated')}
-          >
-            <Text style={styles.choiceIcon}>📊</Text>
-            <Text style={styles.choiceTitle}>Calculate My Goal</Text>
-            <Text style={styles.choiceDescription}>
-              Enter your age, sex, weight, and activity level to get a personalized recommendation
+      <SafeAreaView style={styles.container}>
+        <View style={styles.welcomeContent}>
+          <View style={styles.welcomeHeader}>
+            <Text style={styles.welcomeTitle}>WaterYouSay?</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Track your daily hydration
             </Text>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.choiceCard}
-            onPress={() => setMode('manual')}
-          >
-            <Text style={styles.choiceIcon}>🎯</Text>
-            <Text style={styles.choiceTitle}>Set My Own Goal</Text>
-            <Text style={styles.choiceDescription}>
-              Choose your own daily water intake target
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.optionsContainer}>
+            <TouchableOpacity
+              style={styles.optionCard}
+              onPress={() => setMode('calculated')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.optionTitle}>Personalized Goal</Text>
+              <Text style={styles.optionDescription}>
+                We'll calculate your ideal intake based on your profile
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.optionCard}
+              onPress={() => setMode('manual')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.optionTitle}>Set My Own</Text>
+              <Text style={styles.optionDescription}>
+                Choose your own daily water target
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (mode === 'manual') {
     return (
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setMode('choice')}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-
-        <View style={styles.header}>
-          <Text style={styles.title}>Set Your Goal</Text>
-          <Text style={styles.subtitle}>How much water do you want to drink daily?</Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.screenHeader}>
+          <TouchableOpacity onPress={() => setMode('choice')} style={styles.backButton}>
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.manualContainer}>
-          <View style={styles.manualInputContainer}>
+        <View style={styles.manualContent}>
+          <Text style={styles.screenTitle}>Daily Goal</Text>
+          <Text style={styles.screenSubtitle}>How much water do you want to drink?</Text>
+
+          <View style={styles.goalInputWrapper}>
             <TextInput
-              style={styles.manualInput}
+              style={styles.goalInput}
               value={manualGoal}
               onChangeText={setManualGoal}
               keyboardType="numeric"
               placeholder="2500"
+              placeholderTextColor={COLORS.textTertiary}
             />
-            <Text style={styles.manualUnit}>ml</Text>
+            <Text style={styles.goalUnit}>ml</Text>
           </View>
 
-          <View style={styles.presetContainer}>
-            <Text style={styles.presetLabel}>Quick presets:</Text>
-            <View style={styles.presetRow}>
-              {[2000, 2500, 3000, 3500].map(amount => (
-                <TouchableOpacity
-                  key={amount}
-                  style={[
-                    styles.presetButton,
-                    manualGoal === amount.toString() && styles.presetButtonActive,
-                  ]}
-                  onPress={() => setManualGoal(amount.toString())}
-                >
-                  <Text
-                    style={[
-                      styles.presetText,
-                      manualGoal === amount.toString() && styles.presetTextActive,
-                    ]}
-                  >
-                    {amount / 1000}L
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, !manualGoal && styles.submitButtonDisabled]}
-          onPress={handleManualSubmit}
-          disabled={!manualGoal}
-        >
-          <Text style={styles.submitText}>Start Tracking</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // Calculated mode
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setMode('choice')}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-
-        <View style={styles.header}>
-          <Text style={styles.title}>Your Profile</Text>
-          <Text style={styles.subtitle}>We'll calculate your ideal daily intake</Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Age</Text>
-            <TextInput
-              style={styles.input}
-              value={age}
-              onChangeText={setAge}
-              keyboardType="numeric"
-              placeholder="25"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Sex</Text>
-            <View style={styles.segmentedControl}>
+          <View style={styles.presetsWrapper}>
+            {[2000, 2500, 3000, 3500].map(amount => (
               <TouchableOpacity
-                style={[styles.segment, sex === 'male' && styles.segmentActive]}
-                onPress={() => setSex('male')}
-              >
-                <Text style={[styles.segmentText, sex === 'male' && styles.segmentTextActive]}>
-                  Male
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.segment, sex === 'female' && styles.segmentActive]}
-                onPress={() => setSex('female')}
-              >
-                <Text style={[styles.segmentText, sex === 'female' && styles.segmentTextActive]}>
-                  Female
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Weight (kg)</Text>
-            <TextInput
-              style={styles.input}
-              value={weight}
-              onChangeText={setWeight}
-              keyboardType="decimal-pad"
-              placeholder="70"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Activity Level</Text>
-            {ACTIVITY_LEVELS.map(level => (
-              <TouchableOpacity
-                key={level.value}
+                key={amount}
                 style={[
-                  styles.activityOption,
-                  activityLevel === level.value && styles.activityOptionActive,
+                  styles.presetChip,
+                  manualGoal === amount.toString() && styles.presetChipActive,
                 ]}
-                onPress={() => setActivityLevel(level.value)}
+                onPress={() => setManualGoal(amount.toString())}
               >
                 <Text
                   style={[
-                    styles.activityLabel,
-                    activityLevel === level.value && styles.activityLabelActive,
+                    styles.presetChipText,
+                    manualGoal === amount.toString() && styles.presetChipTextActive,
                   ]}
                 >
-                  {level.label}
+                  {amount / 1000}L
                 </Text>
-                <Text style={styles.activityDescription}>{level.description}</Text>
               </TouchableOpacity>
             ))}
           </View>
-
-          {isCalculatedFormValid() && (
-            <View style={styles.previewContainer}>
-              <Text style={styles.previewLabel}>Your recommended daily intake:</Text>
-              <Text style={styles.previewValue}>{getPreviewGoal()}</Text>
-            </View>
-          )}
         </View>
 
-        <TouchableOpacity
-          style={[styles.submitButton, !isCalculatedFormValid() && styles.submitButtonDisabled]}
-          onPress={handleCalculatedSubmit}
-          disabled={!isCalculatedFormValid()}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.continueButton, !manualGoal && styles.continueButtonDisabled]}
+            onPress={handleManualSubmit}
+            disabled={!manualGoal}
+          >
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.screenHeader}>
+          <TouchableOpacity onPress={() => setMode('choice')} style={styles.backButton}>
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={styles.formScrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.submitText}>Start Tracking</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Text style={styles.screenTitle}>Your Profile</Text>
+          <Text style={styles.screenSubtitle}>Help us calculate your ideal intake</Text>
+
+          <View style={styles.formSection}>
+            <View style={styles.formRow}>
+              <View style={styles.formField}>
+                <Text style={styles.fieldLabel}>Age</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={age}
+                  onChangeText={setAge}
+                  keyboardType="numeric"
+                  placeholder="25"
+                  placeholderTextColor={COLORS.textTertiary}
+                />
+              </View>
+              <View style={styles.formField}>
+                <Text style={styles.fieldLabel}>Weight (kg)</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={weight}
+                  onChangeText={setWeight}
+                  keyboardType="decimal-pad"
+                  placeholder="70"
+                  placeholderTextColor={COLORS.textTertiary}
+                />
+              </View>
+            </View>
+
+            <View style={styles.formFieldFull}>
+              <Text style={styles.fieldLabel}>Sex</Text>
+              <View style={styles.segmentedControl}>
+                <TouchableOpacity
+                  style={[styles.segment, sex === 'male' && styles.segmentActive]}
+                  onPress={() => setSex('male')}
+                >
+                  <Text style={[styles.segmentText, sex === 'male' && styles.segmentTextActive]}>
+                    Male
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.segment, sex === 'female' && styles.segmentActive]}
+                  onPress={() => setSex('female')}
+                >
+                  <Text style={[styles.segmentText, sex === 'female' && styles.segmentTextActive]}>
+                    Female
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.formFieldFull}>
+              <Text style={styles.fieldLabel}>Activity Level</Text>
+              <View style={styles.activityList}>
+                {ACTIVITY_LEVELS.map(level => (
+                  <TouchableOpacity
+                    key={level.value}
+                    style={[
+                      styles.activityItem,
+                      activityLevel === level.value && styles.activityItemActive,
+                    ]}
+                    onPress={() => setActivityLevel(level.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.activityItemTitle,
+                        activityLevel === level.value && styles.activityItemTitleActive,
+                      ]}
+                    >
+                      {level.label}
+                    </Text>
+                    <Text style={styles.activityItemDesc}>{level.description}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {isCalculatedFormValid() && (
+              <View style={styles.resultCard}>
+                <Text style={styles.resultLabel}>Recommended daily intake</Text>
+                <Text style={styles.resultValue}>{getPreviewGoal()}</Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.continueButton, !isCalculatedFormValid() && styles.continueButtonDisabled]}
+            onPress={handleCalculatedSubmit}
+            disabled={!isCalculatedFormValid()}
+          >
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -272,219 +285,243 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  backButton: {
-    marginBottom: 16,
-  },
-  backText: {
-    color: COLORS.primary,
-    fontSize: 16,
-  },
-  header: {
-    marginTop: 40,
-    marginBottom: 32,
+  welcomeContent: {
+    flex: 1,
     paddingHorizontal: 24,
+    justifyContent: 'center',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  welcomeHeader: {
+    marginBottom: 48,
+  },
+  welcomeTitle: {
+    fontSize: 40,
+    fontWeight: '700',
     color: COLORS.text,
     textAlign: 'center',
+    letterSpacing: -1,
   },
-  subtitle: {
-    fontSize: 16,
-    color: COLORS.textLight,
+  welcomeSubtitle: {
+    fontSize: 17,
+    color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: 8,
   },
-  choiceContainer: {
-    paddingHorizontal: 24,
-    gap: 16,
+  optionsContainer: {
+    gap: 12,
   },
-  choiceCard: {
+  optionCard: {
     backgroundColor: COLORS.surface,
     padding: 24,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  choiceIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  choiceTitle: {
-    fontSize: 20,
+  optionTitle: {
+    fontSize: 19,
     fontWeight: '600',
     color: COLORS.text,
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  optionDescription: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    lineHeight: 21,
+  },
+  screenHeader: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  backButton: {
+    paddingVertical: 8,
+  },
+  backText: {
+    fontSize: 17,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  screenTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: COLORS.text,
+    letterSpacing: -0.5,
     marginBottom: 8,
   },
-  choiceDescription: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    lineHeight: 20,
+  screenSubtitle: {
+    fontSize: 17,
+    color: COLORS.textSecondary,
+    marginBottom: 32,
   },
-  form: {
-    gap: 20,
+  manualContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
   },
-  inputGroup: {
-    gap: 8,
+  goalInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+    marginBottom: 32,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
+  goalInput: {
+    fontSize: 64,
+    fontWeight: '200',
     color: COLORS.text,
+    textAlign: 'center',
+    minWidth: 180,
+    letterSpacing: -2,
   },
-  input: {
+  goalUnit: {
+    fontSize: 24,
+    color: COLORS.textTertiary,
+    fontWeight: '400',
+    marginLeft: 4,
+  },
+  presetsWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  presetChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 20,
     backgroundColor: COLORS.surface,
-    padding: 16,
+  },
+  presetChipActive: {
+    backgroundColor: COLORS.text,
+  },
+  presetChipText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+  },
+  presetChipTextActive: {
+    color: COLORS.surface,
+  },
+  formScrollContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  formSection: {
+    gap: 24,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  formField: {
+    flex: 1,
+  },
+  formFieldFull: {
+    width: '100%',
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  fieldInput: {
+    backgroundColor: COLORS.surface,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     borderRadius: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    fontSize: 17,
+    color: COLORS.text,
   },
   segmentedControl: {
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   segment: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   segmentActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.text,
   },
   segmentText: {
     fontSize: 16,
-    color: COLORS.text,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
   },
   segmentTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: COLORS.surface,
   },
-  activityOption: {
+  activityList: {
+    gap: 8,
+  },
+  activityItem: {
     backgroundColor: COLORS.surface,
-    padding: 14,
-    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: 'transparent',
   },
-  activityOptionActive: {
+  activityItemActive: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight + '20',
   },
-  activityLabel: {
-    fontSize: 15,
+  activityItemTitle: {
+    fontSize: 16,
     fontWeight: '600',
     color: COLORS.text,
+    marginBottom: 2,
   },
-  activityLabelActive: {
+  activityItemTitleActive: {
     color: COLORS.primary,
   },
-  activityDescription: {
-    fontSize: 13,
-    color: COLORS.textLight,
-    marginTop: 2,
-  },
-  previewContainer: {
-    backgroundColor: COLORS.primary + '15',
-    padding: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  previewLabel: {
+  activityItemDesc: {
     fontSize: 14,
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
   },
-  previewValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  resultCard: {
+    backgroundColor: COLORS.primary + '10',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  resultLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  resultValue: {
+    fontSize: 36,
+    fontWeight: '300',
     color: COLORS.primary,
-    marginTop: 4,
+    letterSpacing: -1,
   },
-  submitButton: {
-    backgroundColor: COLORS.primary,
-    padding: 18,
+  footer: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingBottom: 24,
+  },
+  continueButton: {
+    backgroundColor: COLORS.text,
+    paddingVertical: 18,
     borderRadius: 14,
     alignItems: 'center',
-    marginTop: 24,
-    marginHorizontal: 24,
   },
-  submitButtonDisabled: {
-    backgroundColor: COLORS.border,
+  continueButtonDisabled: {
+    backgroundColor: COLORS.divider,
   },
-  submitText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  manualContainer: {
-    paddingHorizontal: 24,
-    gap: 24,
-  },
-  manualInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  manualInput: {
-    backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    width: 150,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  manualUnit: {
-    fontSize: 24,
-    color: COLORS.textLight,
-  },
-  presetContainer: {
-    gap: 12,
-  },
-  presetLabel: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    textAlign: 'center',
-  },
-  presetRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  presetButton: {
-    backgroundColor: COLORS.surface,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  presetButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  presetText: {
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  presetTextActive: {
-    color: '#FFFFFF',
+  continueButtonText: {
+    color: COLORS.surface,
+    fontSize: 17,
     fontWeight: '600',
   },
 });

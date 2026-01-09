@@ -17,41 +17,46 @@ export function IntakeLog({ entries, unitSystem, onRemoveEntry }: IntakeLogProps
 
   const formatTime = (timestamp: string): string => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   };
 
   if (entries.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No water logged yet today</Text>
-        <Text style={styles.emptySubtext}>Tap the buttons above to add water</Text>
+        <Text style={styles.emptyText}>No entries yet</Text>
+        <Text style={styles.emptySubtext}>Tap a button above to log water</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Today's Log</Text>
+      <Text style={styles.title}>Activity</Text>
       <FlatList
         data={sortedEntries}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.entry}>
-            <View style={styles.entryInfo}>
-              <Text style={styles.entryAmount}>
-                {mlToDisplay(item.amountMl, unitSystem)}
-              </Text>
-              <Text style={styles.entryTime}>{formatTime(item.timestamp)}</Text>
+            <View style={styles.entryLeft}>
+              <View style={styles.dot} />
+              <View>
+                <Text style={styles.entryAmount}>
+                  {mlToDisplay(item.amountMl, unitSystem)}
+                </Text>
+                <Text style={styles.entryTime}>{formatTime(item.timestamp)}</Text>
+              </View>
             </View>
             <TouchableOpacity
               style={styles.removeButton}
               onPress={() => onRemoveEntry(item.id)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Text style={styles.removeText}>Remove</Text>
             </TouchableOpacity>
           </View>
         )}
         scrollEnabled={false}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
     </View>
   );
@@ -60,60 +65,68 @@ export function IntakeLog({ entries, unitSystem, onRemoveEntry }: IntakeLogProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
   },
   title: {
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 16,
   },
   entry: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    paddingVertical: 12,
   },
-  entryInfo: {
+  entryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
   },
   entryAmount: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '500',
     color: COLORS.text,
+    letterSpacing: -0.3,
   },
   entryTime: {
     fontSize: 14,
-    color: COLORS.textLight,
+    color: COLORS.textTertiary,
+    marginTop: 2,
   },
   removeButton: {
-    padding: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
   },
   removeText: {
-    color: COLORS.error,
+    color: COLORS.textTertiary,
     fontSize: 14,
+    fontWeight: '500',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: COLORS.border,
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 48,
   },
   emptyText: {
-    fontSize: 16,
-    color: COLORS.textLight,
+    fontSize: 17,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   emptySubtext: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginTop: 4,
+    fontSize: 15,
+    color: COLORS.textTertiary,
+    marginTop: 6,
   },
 });

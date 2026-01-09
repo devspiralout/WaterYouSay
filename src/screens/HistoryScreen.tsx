@@ -10,7 +10,6 @@ export function HistoryScreen() {
   const { state } = useWater();
   const { history, settings, todayLog } = state;
 
-  // Combine today with history for display
   const allLogs = [
     { ...todayLog, isToday: true },
     ...history.map(log => ({ ...log, isToday: false })),
@@ -29,26 +28,21 @@ export function HistoryScreen() {
     }
 
     return date.toLocaleDateString('en-US', {
-      weekday: 'short',
+      weekday: 'long',
       month: 'short',
       day: 'numeric',
     });
   };
 
-  const getProgressColor = (progress: number): string => {
-    if (progress >= 100) return COLORS.success;
-    if (progress >= 75) return COLORS.primary;
-    if (progress >= 50) return COLORS.warning;
-    return COLORS.error;
-  };
-
   if (allLogs.length === 0 || (allLogs.length === 1 && todayLog.entries.length === 0)) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Text style={styles.title}>History</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>History</Text>
+        </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No history yet</Text>
-          <Text style={styles.emptySubtext}>Start tracking your water intake!</Text>
+          <Text style={styles.emptySubtext}>Start tracking your water intake</Text>
         </View>
       </SafeAreaView>
     );
@@ -56,47 +50,50 @@ export function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.title}>History</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>History</Text>
+      </View>
 
       <FlatList
         data={allLogs}
         keyExtractor={item => item.date}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
           const progress = calculateProgress(item.totalMl, settings.dailyGoalMl);
-          const progressColor = getProgressColor(progress);
           const metGoal = item.totalMl >= settings.dailyGoalMl;
 
           return (
             <View style={styles.historyItem}>
-              <View style={styles.dateContainer}>
+              <View style={styles.itemHeader}>
                 <Text style={styles.dateText}>
                   {formatDate(item.date, 'isToday' in item && item.isToday)}
                 </Text>
-                {metGoal && <Text style={styles.checkmark}>✓</Text>}
+                {metGoal && (
+                  <View style={styles.goalBadge}>
+                    <Text style={styles.goalBadgeText}>Goal met</Text>
+                  </View>
+                )}
               </View>
 
-              <View style={styles.statsContainer}>
+              <View style={styles.statsRow}>
                 <Text style={styles.amountText}>
                   {mlToDisplay(item.totalMl, settings.unitSystem)}
                 </Text>
-                <Text style={styles.goalText}>
-                  / {mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
-                </Text>
+                <Text style={styles.percentText}>{Math.round(progress)}%</Text>
               </View>
 
               <View style={styles.progressBarContainer}>
                 <View
                   style={[
                     styles.progressBar,
-                    { width: `${Math.min(progress, 100)}%`, backgroundColor: progressColor },
+                    {
+                      width: `${Math.min(progress, 100)}%`,
+                      backgroundColor: metGoal ? COLORS.success : COLORS.primary,
+                    },
                   ]}
                 />
               </View>
-
-              <Text style={[styles.progressText, { color: progressColor }]}>
-                {Math.round(progress)}%
-              </Text>
             </View>
           );
         }}
@@ -110,74 +107,74 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontWeight: '700',
     color: COLORS.text,
-    padding: 20,
-    paddingBottom: 10,
+    letterSpacing: -0.5,
   },
   listContent: {
-    padding: 20,
-    paddingTop: 10,
+    paddingHorizontal: 24,
+    paddingBottom: 100,
   },
   historyItem: {
-    backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  dateContainer: {
+  itemHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   dateText: {
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+  },
+  goalBadge: {
+    backgroundColor: COLORS.success + '18',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  goalBadgeText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: COLORS.text,
-  },
-  checkmark: {
     color: COLORS.success,
-    fontSize: 16,
-    fontWeight: 'bold',
   },
-  statsContainer: {
+  statsRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   amountText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '300',
     color: COLORS.text,
+    letterSpacing: -0.5,
   },
-  goalText: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginLeft: 4,
+  percentText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   progressBarContainer: {
-    height: 8,
+    height: 4,
     backgroundColor: COLORS.border,
-    borderRadius: 4,
+    borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: 6,
   },
   progressBar: {
     height: '100%',
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'right',
+    borderRadius: 2,
   },
   emptyContainer: {
     flex: 1,
@@ -187,11 +184,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: COLORS.textLight,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: COLORS.textLight,
+    fontSize: 15,
+    color: COLORS.textTertiary,
   },
 });

@@ -46,13 +46,21 @@ export function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Today's Progress</Text>
+          <View>
+            <Text style={styles.greeting}>Today</Text>
+            {streak > 0 && (
+              <Text style={styles.streakText}>{streak} day streak</Text>
+            )}
+          </View>
           <TouchableOpacity onPress={toggleUnits} style={styles.unitToggle}>
             <Text style={styles.unitToggleText}>
-              {settings.unitSystem === 'metric' ? 'ml/L' : 'oz'}
+              {settings.unitSystem === 'metric' ? 'ML' : 'OZ'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -64,16 +72,10 @@ export function HomeScreen() {
             currentAmount={mlToDisplay(todayLog.totalMl, settings.unitSystem)}
             goalAmount={mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
           />
-          {streak > 0 && (
-            <View style={styles.streakBadge}>
-              <Text style={styles.streakText}>🔥 {streak} day streak!</Text>
-            </View>
-          )}
         </View>
 
         {/* Quick Add Buttons */}
         <View style={styles.quickAddContainer}>
-          <Text style={styles.sectionTitle}>Quick Add</Text>
           <View style={styles.buttonRow}>
             {quickAddAmounts.map(({ ml, display }) => (
               <WaterButton
@@ -105,14 +107,15 @@ export function HomeScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Custom Amount</Text>
+            <Text style={styles.modalTitle}>Add Water</Text>
             <View style={styles.customInputContainer}>
               <TextInput
                 style={styles.customInput}
                 value={customAmount}
                 onChangeText={setCustomAmount}
                 keyboardType="numeric"
-                placeholder="Enter amount"
+                placeholder="0"
+                placeholderTextColor={COLORS.textTertiary}
                 autoFocus
               />
               <Text style={styles.customUnit}>
@@ -153,109 +156,99 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 120,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
+    alignItems: 'flex-start',
+    marginBottom: 40,
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontWeight: '700',
     color: COLORS.text,
+    letterSpacing: -0.5,
+  },
+  streakText: {
+    fontSize: 15,
+    color: COLORS.streak,
+    fontWeight: '500',
+    marginTop: 4,
   },
   unitToggle: {
-    backgroundColor: COLORS.surface,
     paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingHorizontal: 12,
   },
   unitToggleText: {
-    fontSize: 14,
-    color: COLORS.primary,
+    fontSize: 13,
+    color: COLORS.textSecondary,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
   progressContainer: {
     alignItems: 'center',
-    marginBottom: 32,
-  },
-  streakBadge: {
-    marginTop: 16,
-    backgroundColor: COLORS.warning + '20',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  streakText: {
-    fontSize: 14,
-    color: COLORS.warning,
-    fontWeight: '600',
+    marginBottom: 48,
   },
   quickAddContainer: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
+    marginBottom: 40,
   },
   buttonRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
     justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
   },
   logContainer: {
     flex: 1,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   modalContent: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 20,
+    padding: 28,
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 320,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: COLORS.text,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    letterSpacing: -0.3,
   },
   customInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 28,
   },
   customInput: {
     backgroundColor: COLORS.background,
-    padding: 14,
-    borderRadius: 10,
-    fontSize: 24,
-    fontWeight: '600',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    fontSize: 32,
+    fontWeight: '300',
     textAlign: 'center',
-    width: 150,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    width: 140,
+    color: COLORS.text,
   },
   customUnit: {
-    fontSize: 20,
-    color: COLORS.textLight,
+    fontSize: 18,
+    color: COLORS.textTertiary,
+    fontWeight: '500',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -263,20 +256,20 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 14,
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
   modalCancelText: {
-    fontSize: 16,
-    color: COLORS.textLight,
+    fontSize: 17,
+    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   modalAddButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 14,
     alignItems: 'center',
     backgroundColor: COLORS.primary,
   },
@@ -284,7 +277,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
   },
   modalAddText: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#FFFFFF',
     fontWeight: '600',
   },

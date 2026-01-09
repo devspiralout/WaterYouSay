@@ -1,38 +1,16 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { COLORS } from '../constants';
 
 interface WaterButtonProps {
   amount: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
-  size?: 'small' | 'medium' | 'large';
 }
 
-export function WaterButton({
-  amount,
-  onPress,
-  variant = 'primary',
-  size = 'medium',
-}: WaterButtonProps) {
-  const buttonStyle = [
-    styles.button,
-    variant === 'secondary' && styles.buttonSecondary,
-    size === 'small' && styles.buttonSmall,
-    size === 'large' && styles.buttonLarge,
-  ];
-
-  const textStyle = [
-    styles.text,
-    variant === 'secondary' && styles.textSecondary,
-    size === 'small' && styles.textSmall,
-    size === 'large' && styles.textLarge,
-  ];
-
+export function WaterButton({ amount, onPress }: WaterButtonProps) {
   return (
-    <TouchableOpacity style={buttonStyle} onPress={onPress} activeOpacity={0.7}>
-      <Text style={styles.plus}>+</Text>
-      <Text style={textStyle}>{amount}</Text>
+    <TouchableOpacity style={styles.button} onPress={onPress} activeOpacity={0.6}>
+      <Text style={styles.amount}>{amount}</Text>
     </TouchableOpacity>
   );
 }
@@ -43,72 +21,49 @@ interface CustomAmountButtonProps {
 
 export function CustomAmountButton({ onPress }: CustomAmountButtonProps) {
   return (
-    <TouchableOpacity style={styles.customButton} onPress={onPress} activeOpacity={0.7}>
-      <Text style={styles.customText}>Custom</Text>
+    <TouchableOpacity style={styles.customButton} onPress={onPress} activeOpacity={0.6}>
+      <Text style={styles.customText}>+</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingHorizontal: 18,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 90,
-    flexDirection: 'row',
-    gap: 4,
+    minWidth: 72,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  buttonSecondary: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  buttonSmall: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    minWidth: 70,
-  },
-  buttonLarge: {
-    paddingVertical: 18,
-    paddingHorizontal: 28,
-    minWidth: 110,
-  },
-  text: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  amount: {
+    color: COLORS.text,
+    fontSize: 17,
     fontWeight: '600',
-  },
-  textSecondary: {
-    color: COLORS.primary,
-  },
-  textSmall: {
-    fontSize: 14,
-  },
-  textLarge: {
-    fontSize: 18,
-  },
-  plus: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    letterSpacing: -0.3,
   },
   customButton: {
     backgroundColor: COLORS.surface,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   customText: {
-    color: COLORS.textLight,
-    fontSize: 14,
-    fontWeight: '500',
+    color: COLORS.primary,
+    fontSize: 24,
+    fontWeight: '300',
   },
 });
