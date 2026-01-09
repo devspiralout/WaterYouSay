@@ -48,25 +48,26 @@ export function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <WaterBackground progress={progress} />
+
+      {/* Sticky Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>Today</Text>
+          {streak > 0 && (
+            <Text style={styles.streakText}>{streak} day streak</Text>
+          )}
+        </View>
+        <TouchableOpacity onPress={toggleUnits} style={styles.unitToggle}>
+          <Text style={styles.unitToggleText}>
+            {settings.unitSystem === 'metric' ? 'ML' : 'OZ'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Today</Text>
-            {streak > 0 && (
-              <Text style={styles.streakText}>{streak} day streak</Text>
-            )}
-          </View>
-          <TouchableOpacity onPress={toggleUnits} style={styles.unitToggle}>
-            <Text style={styles.unitToggleText}>
-              {settings.unitSystem === 'metric' ? 'ML' : 'OZ'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Progress Ring */}
         <View style={styles.progressContainer}>
           <ProgressRing
@@ -161,14 +162,17 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 24,
     paddingBottom: 120,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 40,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
+    backgroundColor: 'transparent',
   },
   greeting: {
     fontSize: 34,
