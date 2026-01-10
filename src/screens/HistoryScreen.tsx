@@ -1,15 +1,25 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { mlToDisplay } from '../utils/units';
-import { calculateProgress } from '../utils/calculations';
+import { calculateProgress, getTodayDateString, calculateStreak } from '../utils/calculations';
+
+interface PeriodStats {
+  totalMl: number;
+  averageMl: number;
+  daysTracked: number;
+  bestDay: number;
+}
+
+type StatsTab = 'last7' | 'allTime';
 
 export function HistoryScreen() {
   const { state } = useWater();
   const { colors } = useTheme();
   const { history, settings, todayLog } = state;
+  const [activeTab, setActiveTab] = useState<StatsTab>('last7');
 
   // Dynamic styles based on theme
   const dynamicStyles = useMemo(() => ({
@@ -26,7 +36,133 @@ export function HistoryScreen() {
     historyItem: { borderBottomColor: colors.border },
     emptyText: { color: colors.textSecondary },
     emptySubtext: { color: colors.textTertiary },
+    weeklyCard: { backgroundColor: colors.surface },
+    weeklyTitle: { color: colors.text },
+    weeklySubtitle: { color: colors.textSecondary },
+    statValue: { color: colors.text },
+    statLabel: { color: colors.textSecondary },
+    statHighlight: { color: colors.primary },
+    statSuccess: { color: colors.success },
+    divider: { backgroundColor: colors.border },
+    tabContainer: { backgroundColor: colors.background },
+    tabButton: { backgroundColor: colors.surface },
+    tabButtonActive: { backgroundColor: colors.primary },
+    tabText: { color: colors.textSecondary },
+    tabTextActive: { color: '#FFFFFF' },
+    sectionLabel: { color: colors.textSecondary },
   }), [colors]);
+
+  // Calculate last 7 days stats
+  const last7DaysStats = useMemo((): PeriodStats => {
+    const today = new Date();
+    const last7Dates: string[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      last7Dates.push(date.toISOString().split('T')[0]);
+    }
+
+    const todayDateStr = getTodayDateString();
+    let totalMl = 0;
+    let daysTracked = 0;
+    let bestDay = 0;
+
+    last7Dates.forEach(dateStr => {
+      let dayTotal = 0;
+
+      if (dateStr === todayDateStr) {
+        dayTotal = todayLog.totalMl;
+      } else {
+        const historyEntry = history.find(h => h.date === dateStr);
+        if (historyEntry) {
+          dayTotal = historyEntry.totalMl;
+        }
+      }
+
+      if (dayTotal > 0) {
+        totalMl += dayTotal;
+        daysTracked++;
+        if (dayTotal > bestDay) {
+          bestDay = dayTotal;
+        }
+      }
+    });
+
+    const averageMl = daysTracked > 0 ? Math.round(totalMl / daysTracked) : 0;
+
+    return { totalMl, averageMl, daysTracked, bestDay };
+  }, [history, todayLog]);
+
+  // Calculate all-time stats
+  const allTimeStats = useMemo((): PeriodStats => {
+    const todayDateStr = getTodayDateString();
+    let totalMl = todayLog.totalMl > 0 ? todayLog.totalMl : 0;
+    let daysTracked = todayLog.totalMl > 0 ? 1 : 0;
+    let bestDay = todayLog.totalMl;
+
+    history.forEach(entry => {
+      if (entry.totalMl > 0) {
+        totalMl += entry.totalMl;
+        daysTracked++;
+        if (entry.totalMl > bestDay) {
+          bestDay = entry.totalMl;
+        }
+      }
+    });
+
+    const averageMl = daysTracked > 0 ? Math.round(totalMl / daysTracked) : 0;
+
+    return { totalMl, averageMl, daysTracked, bestDay };
+  }, [history, todayLog]);
+
+  // Calculate current streak
+  const currentStreak = useMemo(() =>
+    calculateStreak(history, settings.dailyGoalMl, todayLog.totalMl),
+    [history, settings.dailyGoalMl, todayLog.totalMl]
+  );
+
+  // Calculate longest streak
+  const longestStreak = useMemo(() => {
+    const todayDateStr = getTodayDateString();
+
+    // Combine today and history, sorted by date
+    const allDays = [
+      { date: todayDateStr, totalMl: todayLog.totalMl },
+      ...history,
+    ].sort((a, b) => a.date.localeCompare(b.date));
+
+    let longest = 0;
+    let current = 0;
+    let prevDate: Date | null = null;
+
+    for (const day of allDays) {
+      if (day.totalMl >= settings.dailyGoalMl) {
+        const thisDate = new Date(day.date + 'T00:00:00');
+
+        if (prevDate) {
+          const diffDays = Math.round((thisDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (diffDays === 1) {
+            current++;
+          } else {
+            current = 1;
+          }
+        } else {
+          current = 1;
+        }
+
+        prevDate = thisDate;
+        if (current > longest) {
+          longest = current;
+        }
+      } else {
+        current = 0;
+        prevDate = null;
+      }
+    }
+
+    return longest;
+  }, [history, todayLog, settings.dailyGoalMl]);
 
   const allLogs = [
     { ...todayLog, isToday: true },
@@ -66,17 +202,121 @@ export function HistoryScreen() {
     );
   }
 
+  const activeStats = activeTab === 'last7' ? last7DaysStats : allTimeStats;
+  const hasStats = activeStats.daysTracked > 0;
+
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <View style={styles.header}>
         <Text style={[styles.title, dynamicStyles.title]}>History</Text>
       </View>
 
+      {/* Sticky Stats Section */}
+      {(last7DaysStats.daysTracked > 0 || allTimeStats.daysTracked > 0) && (
+        <View style={[styles.stickyStats, dynamicStyles.tabContainer]}>
+          {/* Tab Buttons */}
+          <View style={styles.tabRow}>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                dynamicStyles.tabButton,
+                activeTab === 'last7' && dynamicStyles.tabButtonActive,
+              ]}
+              onPress={() => setActiveTab('last7')}
+            >
+              <Text style={[
+                styles.tabText,
+                dynamicStyles.tabText,
+                activeTab === 'last7' && dynamicStyles.tabTextActive,
+              ]}>
+                Last 7 Days
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                dynamicStyles.tabButton,
+                activeTab === 'allTime' && dynamicStyles.tabButtonActive,
+              ]}
+              onPress={() => setActiveTab('allTime')}
+            >
+              <Text style={[
+                styles.tabText,
+                dynamicStyles.tabText,
+                activeTab === 'allTime' && dynamicStyles.tabTextActive,
+              ]}>
+                All Time
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Stats Card */}
+          {hasStats && (
+            <View style={[styles.statsCard, dynamicStyles.weeklyCard]}>
+              {activeTab === 'allTime' && (
+                <Text style={[styles.daysTrackedText, dynamicStyles.weeklySubtitle]}>
+                  {allTimeStats.daysTracked} day{allTimeStats.daysTracked !== 1 ? 's' : ''} tracked
+                </Text>
+              )}
+
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, dynamicStyles.statHighlight]}>
+                    {mlToDisplay(activeStats.averageMl, settings.unitSystem)}
+                  </Text>
+                  <Text style={[styles.statLabel, dynamicStyles.statLabel]}>Daily Avg</Text>
+                </View>
+
+                <View style={[styles.statDivider, dynamicStyles.divider]} />
+
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, dynamicStyles.statSuccess]}>
+                    {mlToDisplay(activeStats.bestDay, settings.unitSystem)}
+                  </Text>
+                  <Text style={[styles.statLabel, dynamicStyles.statLabel]}>Best Day</Text>
+                </View>
+
+                <View style={[styles.statDivider, dynamicStyles.divider]} />
+
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, dynamicStyles.statValue]}>
+                    {mlToDisplay(activeStats.totalMl, settings.unitSystem)}
+                  </Text>
+                  <Text style={[styles.statLabel, dynamicStyles.statLabel]}>Total</Text>
+                </View>
+              </View>
+
+              {/* Streak Row - All Time only */}
+              {activeTab === 'allTime' && (
+                <View style={[styles.streakRow, { borderTopColor: colors.border }]}>
+                  <View style={styles.streakItem}>
+                    <Text style={[styles.streakValue, dynamicStyles.statSuccess]}>
+                      {currentStreak}
+                    </Text>
+                    <Text style={[styles.streakLabel, dynamicStyles.statLabel]}>Current Streak</Text>
+                  </View>
+
+                  <View style={styles.streakItem}>
+                    <Text style={[styles.streakValue, dynamicStyles.statHighlight]}>
+                      {longestStreak}
+                    </Text>
+                    <Text style={[styles.streakLabel, dynamicStyles.statLabel]}>Longest Streak</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+      )}
+
       <FlatList
         data={allLogs}
         keyExtractor={item => item.date}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <Text style={[styles.sectionLabel, dynamicStyles.sectionLabel]}>DAILY LOG</Text>
+        }
         renderItem={({ item }) => {
           const progress = calculateProgress(item.totalMl, settings.dailyGoalMl);
           const metGoal = item.totalMl >= settings.dailyGoalMl;
@@ -137,6 +377,81 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 24,
     paddingBottom: 100,
+  },
+  stickyStats: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  statsCard: {
+    borderRadius: 16,
+    padding: 20,
+  },
+  daysTrackedText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+  },
+  streakRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+  },
+  streakItem: {
+    alignItems: 'center',
+  },
+  streakValue: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  streakLabel: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   historyItem: {
     paddingVertical: 20,
