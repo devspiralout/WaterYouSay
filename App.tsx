@@ -9,6 +9,7 @@ import { WaterProvider, useWater } from './src/context/WaterContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
+import { AchievementsScreen } from './src/screens/AchievementsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 
@@ -22,7 +23,6 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarIcon: () => null,
         tabBarShowLabel: true,
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.textTertiary,
@@ -31,16 +31,35 @@ function MainTabs() {
           borderTopColor: colors.border,
           borderTopWidth: 1,
         },
+        tabBarItemStyle: {
+          paddingVertical: 8,
+        },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
-          letterSpacing: 0.3,
         },
       }}
     >
-      <Tab.Screen name="Today" component={HomeScreen} />
-      <Tab.Screen name="History" component={HistoryScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen
+        name="Today"
+        component={HomeScreen}
+        options={{ tabBarIcon: () => null }}
+      />
+      <Tab.Screen
+        name="History"
+        component={HistoryScreen}
+        options={{ tabBarIcon: () => null }}
+      />
+      <Tab.Screen
+        name="Awards"
+        component={AchievementsScreen}
+        options={{ tabBarIcon: () => null }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ tabBarIcon: () => null }}
+      />
     </Tab.Navigator>
   );
 }

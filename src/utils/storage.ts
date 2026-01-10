@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, AppSettings, DailyLog, HistoryEntry } from '../types';
+import { UserProfile, AppSettings, DailyLog, HistoryEntry, UnlockedAchievement } from '../types';
 import { STORAGE_KEYS, DEFAULT_DAILY_GOAL_ML } from '../constants';
 
 export async function saveProfile(profile: UserProfile): Promise<void> {
@@ -142,8 +142,27 @@ export async function clearAllData(): Promise<void> {
       STORAGE_KEYS.SETTINGS,
       STORAGE_KEYS.TODAY_LOG,
       STORAGE_KEYS.HISTORY,
+      STORAGE_KEYS.ACHIEVEMENTS,
     ]);
   } catch (error) {
     console.error('Error clearing data:', error);
+  }
+}
+
+export async function loadAchievements(): Promise<UnlockedAchievement[]> {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error loading achievements:', error);
+    return [];
+  }
+}
+
+export async function saveAchievements(achievements: UnlockedAchievement[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
+  } catch (error) {
+    console.error('Error saving achievements:', error);
   }
 }

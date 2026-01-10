@@ -9,6 +9,8 @@ import {
   WaterEntry,
   DailyLog,
   HistoryEntry,
+  AchievementId,
+  UnlockedAchievement,
 } from '../types';
 import { DEFAULT_DAILY_GOAL_ML } from '../constants';
 import {
@@ -20,9 +22,12 @@ import {
   loadTodayLog,
   loadHistory,
   saveHistory,
+  loadAchievements,
+  saveAchievements,
 } from '../utils/storage';
 import { getTodayDateString, generateEntryId, calculateDailyWaterGoal } from '../utils/calculations';
 import { generateMockTodayLog, generateMockHistory } from '../utils/mockData';
+import { checkAchievements } from '../utils/achievements';
 
 type Action =
   | { type: 'LOAD_STATE'; payload: Partial<AppState> }
@@ -38,6 +43,7 @@ type Action =
   | { type: 'COMPLETE_ONBOARDING' }
   | { type: 'RESET_ONBOARDING' }
   | { type: 'CLEAR_TODAY' }
+  | { type: 'UNLOCK_ACHIEVEMENT'; payload: { id: AchievementId } }
   | { type: 'LOAD_MOCK_DATA'; payload: { todayLog: DailyLog; history: HistoryEntry[] } };
 
 const initialState: AppState = {
@@ -62,6 +68,7 @@ const initialState: AppState = {
     totalMl: 0,
   },
   history: [],
+  unlockedAchievements: [],
 };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -201,6 +208,21 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
 
+    case 'UNLOCK_ACHIEVEMENT': {
+      // Don't add if already unlocked
+      if (state.unlockedAchievements.find(a => a.id === action.payload.id)) {
+        return state;
+      }
+      const newAchievement: UnlockedAchievement = {
+        id: action.payload.id,
+        unlockedAt: new Date().toISOString(),
+      };
+      return {
+        ...state,
+        unlockedAchievements: [...state.unlockedAchievements, newAchievement],
+      };
+    }
+
     case 'LOAD_MOCK_DATA':
       return {
         ...state,
@@ -221,11 +243,12 @@ export function WaterProvider({ children }: { children: ReactNode }) {
   // Load saved data on mount
   useEffect(() => {
     async function loadSavedData() {
-      const [profile, settings, todayLog, history] = await Promise.all([
+      const [profile, settings, todayLog, history, unlockedAchievements] = await Promise.all([
         loadProfile(),
         loadSettings(),
         loadTodayLog(getTodayDateString()),
         loadHistory(),
+        loadAchievements(),
       ]);
 
       dispatch({
@@ -235,6 +258,7 @@ export function WaterProvider({ children }: { children: ReactNode }) {
           settings,
           todayLog,
           history,
+          unlockedAchievements,
         },
       });
     }
@@ -257,6 +281,28 @@ export function WaterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveTodayLog(state.todayLog);
   }, [state.todayLog]);
+
+  // Save achievements when they change
+  useEffect(() => {
+    if (state.unlockedAchievements.length > 0) {
+      saveAchievements(state.unlockedAchievements);
+    }
+  }, [state.unlockedAchievements]);
+
+  // Check for new achievements when relevant state changes
+  useEffect(() => {
+    const newAchievements = checkAchievements({
+      todayLog: state.todayLog,
+      history: state.history,
+      dailyGoalMl: state.settings.dailyGoalMl,
+      unlockedAchievements: state.unlockedAchievements,
+    });
+
+    // Unlock each new achievement
+    newAchievements.forEach(id => {
+      dispatch({ type: 'UNLOCK_ACHIEVEMENT', payload: { id } });
+    });
+  }, [state.todayLog, state.history, state.settings.dailyGoalMl, state.unlockedAchievements]);
 
   const contextValue: WaterContextType = {
     state,
@@ -295,6 +341,9 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     },
     clearToday: () => {
       dispatch({ type: 'CLEAR_TODAY' });
+    },
+    unlockAchievement: (id: AchievementId) => {
+      dispatch({ type: 'UNLOCK_ACHIEVEMENT', payload: { id } });
     },
     loadMockData: async (todayEntries: number, historyDays: number) => {
       const todayLog = generateMockTodayLog(todayEntries);

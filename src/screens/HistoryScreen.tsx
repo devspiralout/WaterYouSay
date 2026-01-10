@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { mlToDisplay } from '../utils/units';
-import { calculateProgress, getTodayDateString, calculateStreak } from '../utils/calculations';
+import { calculateProgress, getTodayDateString } from '../utils/calculations';
 
 interface PeriodStats {
   totalMl: number;
@@ -116,54 +116,6 @@ export function HistoryScreen() {
     return { totalMl, averageMl, daysTracked, bestDay };
   }, [history, todayLog]);
 
-  // Calculate current streak
-  const currentStreak = useMemo(() =>
-    calculateStreak(history, settings.dailyGoalMl, todayLog.totalMl),
-    [history, settings.dailyGoalMl, todayLog.totalMl]
-  );
-
-  // Calculate longest streak
-  const longestStreak = useMemo(() => {
-    const todayDateStr = getTodayDateString();
-
-    // Combine today and history, sorted by date
-    const allDays = [
-      { date: todayDateStr, totalMl: todayLog.totalMl },
-      ...history,
-    ].sort((a, b) => a.date.localeCompare(b.date));
-
-    let longest = 0;
-    let current = 0;
-    let prevDate: Date | null = null;
-
-    for (const day of allDays) {
-      if (day.totalMl >= settings.dailyGoalMl) {
-        const thisDate = new Date(day.date + 'T00:00:00');
-
-        if (prevDate) {
-          const diffDays = Math.round((thisDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (diffDays === 1) {
-            current++;
-          } else {
-            current = 1;
-          }
-        } else {
-          current = 1;
-        }
-
-        prevDate = thisDate;
-        if (current > longest) {
-          longest = current;
-        }
-      } else {
-        current = 0;
-        prevDate = null;
-      }
-    }
-
-    return longest;
-  }, [history, todayLog, settings.dailyGoalMl]);
-
   const allLogs = [
     { ...todayLog, isToday: true },
     ...history.map(log => ({ ...log, isToday: false })),
@@ -253,11 +205,6 @@ export function HistoryScreen() {
           {/* Stats Card */}
           {hasStats && (
             <View style={[styles.statsCard, dynamicStyles.weeklyCard]}>
-              {activeTab === 'allTime' && (
-                <Text style={[styles.daysTrackedText, dynamicStyles.weeklySubtitle]}>
-                  {allTimeStats.daysTracked} day{allTimeStats.daysTracked !== 1 ? 's' : ''} tracked
-                </Text>
-              )}
 
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
@@ -286,24 +233,6 @@ export function HistoryScreen() {
                 </View>
               </View>
 
-              {/* Streak Row - All Time only */}
-              {activeTab === 'allTime' && (
-                <View style={[styles.streakRow, { borderTopColor: colors.border }]}>
-                  <View style={styles.streakItem}>
-                    <Text style={[styles.streakValue, dynamicStyles.statSuccess]}>
-                      {currentStreak}
-                    </Text>
-                    <Text style={[styles.streakLabel, dynamicStyles.statLabel]}>Current Streak</Text>
-                  </View>
-
-                  <View style={styles.streakItem}>
-                    <Text style={[styles.streakValue, dynamicStyles.statHighlight]}>
-                      {longestStreak}
-                    </Text>
-                    <Text style={[styles.streakLabel, dynamicStyles.statLabel]}>Longest Streak</Text>
-                  </View>
-                </View>
-              )}
             </View>
           )}
         </View>
@@ -433,25 +362,6 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 40,
-  },
-  streakRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-  },
-  streakItem: {
-    alignItems: 'center',
-  },
-  streakValue: {
-    fontSize: 24,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  streakLabel: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   historyItem: {
     paddingVertical: 20,

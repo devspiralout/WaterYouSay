@@ -53,6 +53,33 @@ export interface AppState {
   settings: AppSettings;
   todayLog: DailyLog;
   history: HistoryEntry[];
+  unlockedAchievements: UnlockedAchievement[];
+}
+
+export type AchievementId =
+  | 'first_sip'
+  | 'goal_crusher'
+  | 'streak_3'
+  | 'streak_7'
+  | 'streak_14'
+  | 'streak_30'
+  | 'days_10'
+  | 'days_30'
+  | 'days_100'
+  | 'volume_10l'
+  | 'volume_100l';
+
+export interface Achievement {
+  id: AchievementId;
+  title: string;
+  description: string;
+  icon: string;
+  category: 'streak' | 'milestone' | 'volume';
+}
+
+export interface UnlockedAchievement {
+  id: AchievementId;
+  unlockedAt: string; // ISO date string
 }
 
 export interface WaterContextType {
@@ -69,5 +96,6 @@ export interface WaterContextType {
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   clearToday: () => void;
+  unlockAchievement: (id: AchievementId) => void;
   loadMockData: (todayEntries: number, historyDays: number) => Promise<void>;
 }

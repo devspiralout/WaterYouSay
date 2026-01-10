@@ -1,4 +1,4 @@
-import { ActivityLevel } from '../types';
+import { ActivityLevel, Achievement } from '../types';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -93,4 +93,88 @@ export const STORAGE_KEYS = {
   SETTINGS: '@wateryousay_settings',
   TODAY_LOG: '@wateryousay_today',
   HISTORY: '@wateryousay_history',
+  ACHIEVEMENTS: '@wateryousay_achievements',
 };
+
+export const ACHIEVEMENTS: Achievement[] = [
+  // Milestone achievements
+  {
+    id: 'first_sip',
+    title: 'First Sip',
+    description: 'Log your first water entry',
+    icon: '💧',
+    category: 'milestone',
+  },
+  {
+    id: 'goal_crusher',
+    title: 'Goal Crusher',
+    description: 'Reach your daily goal for the first time',
+    icon: '🎯',
+    category: 'milestone',
+  },
+  {
+    id: 'days_10',
+    title: 'Getting Started',
+    description: 'Track water for 10 days',
+    icon: '📅',
+    category: 'milestone',
+  },
+  {
+    id: 'days_30',
+    title: 'Committed',
+    description: 'Track water for 30 days',
+    icon: '📆',
+    category: 'milestone',
+  },
+  {
+    id: 'days_100',
+    title: 'Centurion',
+    description: 'Track water for 100 days',
+    icon: '💯',
+    category: 'milestone',
+  },
+  // Streak achievements
+  {
+    id: 'streak_3',
+    title: 'Hat Trick',
+    description: 'Reach a 3-day streak',
+    icon: '🔥',
+    category: 'streak',
+  },
+  {
+    id: 'streak_7',
+    title: 'Week Warrior',
+    description: 'Reach a 7-day streak',
+    icon: '⚡',
+    category: 'streak',
+  },
+  {
+    id: 'streak_14',
+    title: 'Fortnight Force',
+    description: 'Reach a 14-day streak',
+    icon: '💪',
+    category: 'streak',
+  },
+  {
+    id: 'streak_30',
+    title: 'Month Master',
+    description: 'Reach a 30-day streak',
+    icon: '👑',
+    category: 'streak',
+  },
+  // Volume achievements
+  {
+    id: 'volume_10l',
+    title: 'Hydration Hero',
+    description: 'Drink 10 liters total',
+    icon: '🌊',
+    category: 'volume',
+  },
+  {
+    id: 'volume_100l',
+    title: 'Ocean',
+    description: 'Drink 100 liters total',
+    icon: '🏊',
+    category: 'volume',
+  },
+];

@@ -18,7 +18,7 @@ import { IntakeLog } from '../components/IntakeLog';
 import { WaterBackground } from '../components/WaterBackground';
 import { CelebrationSplash } from '../components/CelebrationSplash';
 import { UndoToast } from '../components/UndoToast';
-import { calculateProgress, calculateStreak } from '../utils/calculations';
+import { calculateProgress } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, successFeedback, warningFeedback } from '../utils/haptics';
 import { loadSounds, playWaterSound } from '../utils/sounds';
@@ -33,16 +33,14 @@ export function HomeScreen() {
   const [undoToastVisible, setUndoToastVisible] = useState(false);
   const [lastDeletedAmount, setLastDeletedAmount] = useState<number | null>(null);
 
-  const { todayLog, settings, history } = state;
+  const { todayLog, settings } = state;
   const progress = calculateProgress(todayLog.totalMl, settings.dailyGoalMl);
-  const streak = calculateStreak(history, settings.dailyGoalMl, todayLog.totalMl);
   const quickAddAmounts = getQuickAddAmounts(settings.unitSystem, settings.quickAddAmounts);
 
   // Dynamic styles based on theme
   const dynamicStyles = useMemo(() => ({
     container: { backgroundColor: colors.background },
     greeting: { color: colors.text },
-    streakText: { color: colors.streak },
     unitToggleText: { color: colors.textSecondary },
     logCard: { 
       backgroundColor: colors.surface + 'BF', // 75% opacity
@@ -150,12 +148,7 @@ export function HomeScreen() {
 
       {/* Sticky Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={[styles.greeting, dynamicStyles.greeting]}>Today</Text>
-          <Text style={[styles.streakText, dynamicStyles.streakText, { opacity: streak > 0 ? 1 : 0 }]}>
-            {streak > 0 ? `${streak} day streak` : ' '}
-          </Text>
-        </View>
+        <Text style={[styles.greeting, dynamicStyles.greeting]}>Today</Text>
         <TouchableOpacity onPress={toggleUnits} style={styles.unitToggle}>
           <Text style={[styles.unitToggleText, dynamicStyles.unitToggleText]}>
             {settings.unitSystem === 'metric' ? 'ML' : 'OZ'}
@@ -299,11 +292,6 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '700',
     letterSpacing: -0.5,
-  },
-  streakText: {
-    fontSize: 15,
-    fontWeight: '500',
-    marginTop: 4,
   },
   unitToggle: {
     paddingVertical: 8,
