@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated, Dimensions, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { COLORS } from '../constants';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -15,6 +15,7 @@ interface WaterBackgroundProps {
 }
 
 export function WaterBackground({ progress }: WaterBackgroundProps) {
+  const { colors } = useTheme();
   const waveAnim1 = useRef(new Animated.Value(0)).current;
   const waveAnim2 = useRef(new Animated.Value(0)).current;
   const riseAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -129,7 +130,7 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
         <Svg width={SVG_WIDTH} height={SVG_HEIGHT}>
           <Path
             d={createWavePath(0)}
-            fill={showGoalColor ? COLORS.success + '25' : COLORS.primary + '15'}
+            fill={showGoalColor ? colors.success + '25' : colors.primary + '15'}
           />
         </Svg>
       </Animated.View>
@@ -150,7 +151,7 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
         <Svg width={SVG_WIDTH} height={SVG_HEIGHT}>
           <Path
             d={createWavePath(Math.PI / 3)}
-            fill={showGoalColor ? COLORS.success + '18' : COLORS.primary + '10'}
+            fill={showGoalColor ? colors.success + '18' : colors.primary + '10'}
           />
         </Svg>
       </Animated.View>

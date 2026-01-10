@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
+import { useTheme } from '../context/ThemeContext';
 import { ProgressRing } from '../components/ProgressRing';
 import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { IntakeLog } from '../components/IntakeLog';
 import { WaterBackground } from '../components/WaterBackground';
 import { CelebrationSplash } from '../components/CelebrationSplash';
 import { UndoToast } from '../components/UndoToast';
-import { COLORS } from '../constants';
 import { calculateProgress, calculateStreak } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, successFeedback, warningFeedback } from '../utils/haptics';
@@ -24,6 +24,7 @@ import { loadSounds, playWaterSound } from '../utils/sounds';
 
 export function HomeScreen() {
   const { state, addWater, removeEntry, setUnitSystem } = useWater();
+  const { colors } = useTheme();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
@@ -35,6 +36,26 @@ export function HomeScreen() {
   const progress = calculateProgress(todayLog.totalMl, settings.dailyGoalMl);
   const streak = calculateStreak(history, settings.dailyGoalMl, todayLog.totalMl);
   const quickAddAmounts = getQuickAddAmounts(settings.unitSystem, settings.quickAddAmounts);
+
+  // Dynamic styles based on theme
+  const dynamicStyles = useMemo(() => ({
+    container: { backgroundColor: colors.background },
+    greeting: { color: colors.text },
+    streakText: { color: colors.streak },
+    unitToggleText: { color: colors.textSecondary },
+    logCard: { 
+      backgroundColor: colors.surface + 'BF', // 75% opacity
+      borderColor: colors.surface + '80', // 50% opacity
+    },
+    modalContent: { backgroundColor: colors.surface },
+    modalTitle: { color: colors.text },
+    customInput: { backgroundColor: colors.background, color: colors.text },
+    customUnit: { color: colors.textTertiary },
+    modalCancelButton: { backgroundColor: colors.background },
+    modalCancelText: { color: colors.textSecondary },
+    modalAddButton: { backgroundColor: colors.primary },
+    modalAddButtonDisabled: { backgroundColor: colors.border },
+  }), [colors]);
 
   // Load sounds on mount
   useEffect(() => {
@@ -103,19 +124,19 @@ export function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <WaterBackground progress={progress} />
 
       {/* Sticky Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Today</Text>
-          <Text style={[styles.streakText, { opacity: streak > 0 ? 1 : 0 }]}>
+          <Text style={[styles.greeting, dynamicStyles.greeting]}>Today</Text>
+          <Text style={[styles.streakText, dynamicStyles.streakText, { opacity: streak > 0 ? 1 : 0 }]}>
             {streak > 0 ? `${streak} day streak` : ' '}
           </Text>
         </View>
         <TouchableOpacity onPress={toggleUnits} style={styles.unitToggle}>
-          <Text style={styles.unitToggleText}>
+          <Text style={[styles.unitToggleText, dynamicStyles.unitToggleText]}>
             {settings.unitSystem === 'metric' ? 'ML' : 'OZ'}
           </Text>
         </TouchableOpacity>
@@ -150,7 +171,7 @@ export function HomeScreen() {
 
         {/* Today's Log */}
         <View style={styles.logContainer}>
-          <View style={styles.logCard}>
+          <View style={[styles.logCard, dynamicStyles.logCard]}>
             <IntakeLog
               entries={todayLog.entries}
               unitSystem={settings.unitSystem}
@@ -168,36 +189,37 @@ export function HomeScreen() {
         onRequestClose={() => setCustomModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Water</Text>
+          <View style={[styles.modalContent, dynamicStyles.modalContent]}>
+            <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>Add Water</Text>
             <View style={styles.customInputContainer}>
               <TextInput
-                style={styles.customInput}
+                style={[styles.customInput, dynamicStyles.customInput]}
                 value={customAmount}
                 onChangeText={setCustomAmount}
                 keyboardType="numeric"
                 placeholder="0"
-                placeholderTextColor={COLORS.textTertiary}
+                placeholderTextColor={colors.textTertiary}
                 autoFocus
               />
-              <Text style={styles.customUnit}>
+              <Text style={[styles.customUnit, dynamicStyles.customUnit]}>
                 {settings.unitSystem === 'metric' ? 'ml' : 'oz'}
               </Text>
             </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalCancelButton}
+                style={[styles.modalCancelButton, dynamicStyles.modalCancelButton]}
                 onPress={() => {
                   setCustomAmount('');
                   setCustomModalVisible(false);
                 }}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={[styles.modalCancelText, dynamicStyles.modalCancelText]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.modalAddButton,
-                  !customAmount && styles.modalAddButtonDisabled,
+                  dynamicStyles.modalAddButton,
+                  !customAmount && [styles.modalAddButtonDisabled, dynamicStyles.modalAddButtonDisabled],
                 ]}
                 onPress={handleCustomAdd}
                 disabled={!customAmount}
@@ -229,7 +251,6 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -248,12 +269,10 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 34,
     fontWeight: '700',
-    color: COLORS.text,
     letterSpacing: -0.5,
   },
   streakText: {
     fontSize: 15,
-    color: COLORS.streak,
     fontWeight: '500',
     marginTop: 4,
   },
@@ -263,7 +282,6 @@ const styles = StyleSheet.create({
   },
   unitToggleText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
@@ -285,11 +303,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -304,7 +320,6 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalContent: {
-    backgroundColor: COLORS.surface,
     borderRadius: 20,
     padding: 28,
     width: '100%',
@@ -313,7 +328,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: COLORS.text,
     textAlign: 'center',
     marginBottom: 24,
     letterSpacing: -0.3,
@@ -326,7 +340,6 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   customInput: {
-    backgroundColor: COLORS.background,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 14,
@@ -334,11 +347,9 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     textAlign: 'center',
     width: 140,
-    color: COLORS.text,
   },
   customUnit: {
     fontSize: 18,
-    color: COLORS.textTertiary,
     fontWeight: '500',
   },
   modalButtons: {
@@ -350,11 +361,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    backgroundColor: COLORS.background,
   },
   modalCancelText: {
     fontSize: 17,
-    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   modalAddButton: {
@@ -362,10 +371,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
   },
   modalAddButtonDisabled: {
-    backgroundColor: COLORS.border,
+    // Handled by dynamic styles
   },
   modalAddText: {
     fontSize: 17,

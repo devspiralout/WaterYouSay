@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { COLORS } from '../constants';
+import { useTheme } from '../context/ThemeContext';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -20,6 +20,7 @@ export function ProgressRing({
   currentAmount,
   goalAmount,
 }: ProgressRingProps) {
+  const { colors } = useTheme();
   const animatedProgress = useRef(new Animated.Value(0)).current;
 
   const radius = (size - strokeWidth) / 2;
@@ -47,7 +48,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={COLORS.border}
+          stroke={colors.border}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -56,7 +57,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={progress >= 100 ? COLORS.success : COLORS.primary}
+          stroke={progress >= 100 ? colors.success : colors.primary}
           strokeWidth={strokeWidth}
           fill="none"
           strokeDasharray={circumference}
@@ -66,10 +67,10 @@ export function ProgressRing({
         />
       </Svg>
       <View style={[styles.textContainer, { width: size, height: size }]}>
-        <Text style={styles.currentAmount}>{currentAmount}</Text>
+        <Text style={[styles.currentAmount, { color: colors.text }]}>{currentAmount}</Text>
         <View style={styles.goalContainer}>
-          <Text style={styles.goalLabel}>of </Text>
-          <Text style={styles.goalAmount}>{goalAmount}</Text>
+          <Text style={[styles.goalLabel, { color: colors.textTertiary }]}>of </Text>
+          <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>{goalAmount}</Text>
         </View>
       </View>
     </View>
@@ -91,7 +92,6 @@ const styles = StyleSheet.create({
   currentAmount: {
     fontSize: 56,
     fontWeight: '200',
-    color: COLORS.text,
     letterSpacing: -2,
   },
   goalContainer: {
@@ -102,11 +102,9 @@ const styles = StyleSheet.create({
   goalLabel: {
     fontSize: 15,
     fontWeight: '400',
-    color: COLORS.textTertiary,
   },
   goalAmount: {
     fontSize: 15,
     fontWeight: '500',
-    color: COLORS.textSecondary,
   },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../constants';
+import { useTheme } from '../context/ThemeContext';
 
 interface WaterButtonProps {
   amount: string;
@@ -8,9 +8,14 @@ interface WaterButtonProps {
 }
 
 export function WaterButton({ amount, onPress }: WaterButtonProps) {
+  const { colors } = useTheme();
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress} activeOpacity={0.6}>
-      <Text style={styles.amount}>{amount}</Text>
+    <TouchableOpacity 
+      style={[styles.button, { backgroundColor: colors.surface }]} 
+      onPress={onPress} 
+      activeOpacity={0.6}
+    >
+      <Text style={[styles.amount, { color: colors.text }]}>{amount}</Text>
     </TouchableOpacity>
   );
 }
@@ -20,16 +25,20 @@ interface CustomAmountButtonProps {
 }
 
 export function CustomAmountButton({ onPress }: CustomAmountButtonProps) {
+  const { colors } = useTheme();
   return (
-    <TouchableOpacity style={styles.customButton} onPress={onPress} activeOpacity={0.6}>
-      <Text style={styles.customText}>+</Text>
+    <TouchableOpacity 
+      style={[styles.customButton, { backgroundColor: colors.surface }]} 
+      onPress={onPress} 
+      activeOpacity={0.6}
+    >
+      <Text style={[styles.customText, { color: colors.primary }]}>+</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: COLORS.surface,
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderRadius: 14,
@@ -43,13 +52,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   amount: {
-    color: COLORS.text,
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.3,
   },
   customButton: {
-    backgroundColor: COLORS.surface,
     width: 50,
     height: 50,
     borderRadius: 25,
@@ -62,7 +69,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   customText: {
-    color: COLORS.primary,
     fontSize: 24,
     fontWeight: '300',
   },

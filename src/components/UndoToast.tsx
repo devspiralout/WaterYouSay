@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { COLORS } from '../constants';
+import { useTheme } from '../context/ThemeContext';
 
 interface UndoToastProps {
   visible: boolean;
@@ -17,6 +17,7 @@ export function UndoToast({
   onDismiss,
   duration = 4000
 }: UndoToastProps) {
+  const { colors } = useTheme();
   const translateY = useRef(new Animated.Value(100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -80,10 +81,10 @@ export function UndoToast({
         }
       ]}
     >
-      <View style={styles.content}>
-        <Text style={styles.message}>{message}</Text>
+      <View style={[styles.content, { backgroundColor: colors.text }]}>
+        <Text style={[styles.message, { color: colors.surface }]}>{message}</Text>
         <TouchableOpacity onPress={handleUndo} style={styles.undoButton}>
-          <Text style={styles.undoText}>Undo</Text>
+          <Text style={[styles.undoText, { color: colors.primary }]}>Undo</Text>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -99,7 +100,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   content: {
-    backgroundColor: COLORS.text,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -113,7 +113,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   message: {
-    color: COLORS.surface,
     fontSize: 15,
     flex: 1,
   },
@@ -123,7 +122,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   undoText: {
-    color: COLORS.primary,
     fontSize: 15,
     fontWeight: '600',
   },

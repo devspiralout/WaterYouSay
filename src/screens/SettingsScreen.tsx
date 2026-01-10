@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS, ACTIVITY_LEVELS } from '../constants';
+import { ACTIVITY_LEVELS } from '../constants';
 import { ThemeMode } from '../types';
 import { mlToDisplay, formatWeight } from '../utils/units';
 import { clearAllData } from '../utils/storage';
@@ -47,6 +47,57 @@ export function SettingsScreen() {
   const [editingAmounts, setEditingAmounts] = useState<string[]>(
     settings.quickAddAmounts.map(a => a.toString())
   );
+
+  // Dynamic styles based on theme
+  const dynamicStyles = useMemo(() => ({
+    container: { backgroundColor: colors.background },
+    title: { color: colors.text },
+    sectionTitle: { color: colors.textSecondary },
+    settingRow: { backgroundColor: colors.surface },
+    settingLabel: { color: colors.text },
+    settingValue: { color: colors.textSecondary },
+    chevron: { color: colors.textTertiary },
+    segmentedControl: { backgroundColor: colors.background },
+    segmentActive: { backgroundColor: colors.surface },
+    segmentText: { color: colors.textSecondary },
+    segmentTextActive: { color: colors.text },
+    reminderCard: { backgroundColor: colors.surface },
+    reminderSubtext: { color: colors.textSecondary },
+    intervalRow: { borderTopColor: colors.border },
+    intervalOption: { backgroundColor: colors.background },
+    intervalOptionActive: { backgroundColor: colors.primary },
+    intervalOptionText: { color: colors.text },
+    intervalOptionTextActive: { color: colors.surface },
+    profileCard: { backgroundColor: colors.surface },
+    profileValue: { color: colors.text },
+    profileLabel: { color: colors.textSecondary },
+    breakdownCard: { backgroundColor: colors.surface },
+    breakdownLabel: { color: colors.textSecondary },
+    breakdownValue: { color: colors.text },
+    breakdownTotal: { borderTopColor: colors.border },
+    breakdownTotalLabel: { color: colors.text },
+    breakdownTotalValue: { color: colors.primary },
+    disclaimer: { color: colors.textTertiary },
+    dangerText: { color: colors.error },
+    appName: { color: colors.textSecondary },
+    version: { color: colors.textTertiary },
+    debugLabel: { color: colors.primary },
+    debugCard: { backgroundColor: colors.surface },
+    debugDescription: { color: colors.textSecondary },
+    debugButton: { backgroundColor: colors.background },
+    debugButtonText: { color: colors.text },
+    modalContent: { backgroundColor: colors.surface },
+    modalTitle: { color: colors.text },
+    goalInput: { backgroundColor: colors.background, color: colors.text },
+    goalUnit: { color: colors.textTertiary },
+    modalCancelButton: { backgroundColor: colors.background },
+    modalCancelText: { color: colors.textSecondary },
+    modalSaveButton: { backgroundColor: colors.text },
+    modalSaveText: { color: colors.surface },
+    quickAddHint: { color: colors.textSecondary },
+    quickAddInput: { backgroundColor: colors.background, color: colors.text },
+    quickAddUnit: { color: colors.textSecondary },
+  }), [colors]);
 
   // Schedule reminders when settings change
   useEffect(() => {
@@ -135,9 +186,9 @@ export function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+        <Text style={[styles.title, dynamicStyles.title]}>Settings</Text>
       </View>
 
       <ScrollView
@@ -146,53 +197,54 @@ export function SettingsScreen() {
       >
         {/* Daily Goal */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>GOAL</Text>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>GOAL</Text>
           <TouchableOpacity
-            style={[styles.settingRow, styles.settingRowFirst]}
+            style={[styles.settingRow, styles.settingRowFirst, dynamicStyles.settingRow]}
             onPress={() => {
               setNewGoal(settings.dailyGoalMl.toString());
               setGoalModalVisible(true);
             }}
           >
-            <Text style={styles.settingLabel}>Daily Target</Text>
+            <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Daily Target</Text>
             <View style={styles.settingRight}>
-              <Text style={styles.settingValue}>
+              <Text style={[styles.settingValue, dynamicStyles.settingValue]}>
                 {mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
               </Text>
-              <Text style={styles.chevron}>›</Text>
+              <Text style={[styles.chevron, dynamicStyles.chevron]}>›</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.settingRow, styles.settingRowLast]}
+            style={[styles.settingRow, styles.settingRowLast, dynamicStyles.settingRow]}
             onPress={handleOpenQuickAddModal}
           >
-            <Text style={styles.settingLabel}>Quick Add Buttons</Text>
+            <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Quick Add Buttons</Text>
             <View style={styles.settingRight}>
-              <Text style={styles.settingValue}>
+              <Text style={[styles.settingValue, dynamicStyles.settingValue]}>
                 {settings.quickAddAmounts.map(a => `${a}ml`).join(', ')}
               </Text>
-              <Text style={styles.chevron}>›</Text>
+              <Text style={[styles.chevron, dynamicStyles.chevron]}>›</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         {/* Units */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>UNITS</Text>
-          <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Measurement</Text>
-            <View style={styles.segmentedControl}>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>UNITS</Text>
+          <View style={[styles.settingRow, dynamicStyles.settingRow]}>
+            <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Measurement</Text>
+            <View style={[styles.segmentedControl, dynamicStyles.segmentedControl]}>
               <TouchableOpacity
                 style={[
                   styles.segment,
-                  settings.unitSystem === 'metric' && styles.segmentActive,
+                  settings.unitSystem === 'metric' && [styles.segmentActive, dynamicStyles.segmentActive],
                 ]}
                 onPress={() => setUnitSystem('metric')}
               >
                 <Text
                   style={[
                     styles.segmentText,
-                    settings.unitSystem === 'metric' && styles.segmentTextActive,
+                    dynamicStyles.segmentText,
+                    settings.unitSystem === 'metric' && dynamicStyles.segmentTextActive,
                   ]}
                 >
                   Metric
@@ -201,14 +253,15 @@ export function SettingsScreen() {
               <TouchableOpacity
                 style={[
                   styles.segment,
-                  settings.unitSystem === 'imperial' && styles.segmentActive,
+                  settings.unitSystem === 'imperial' && [styles.segmentActive, dynamicStyles.segmentActive],
                 ]}
                 onPress={() => setUnitSystem('imperial')}
               >
                 <Text
                   style={[
                     styles.segmentText,
-                    settings.unitSystem === 'imperial' && styles.segmentTextActive,
+                    dynamicStyles.segmentText,
+                    settings.unitSystem === 'imperial' && dynamicStyles.segmentTextActive,
                   ]}
                 >
                   Imperial
@@ -220,12 +273,12 @@ export function SettingsScreen() {
 
         {/* Reminders */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>REMINDERS</Text>
-          <View style={styles.reminderCard}>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>REMINDERS</Text>
+          <View style={[styles.reminderCard, dynamicStyles.reminderCard]}>
             <View style={styles.reminderRow}>
               <View>
-                <Text style={styles.settingLabel}>Water Reminders</Text>
-                <Text style={styles.reminderSubtext}>
+                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Water Reminders</Text>
+                <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>
                   {settings.reminders.enabled
                     ? `Active ${settings.reminders.startHour}:00 - ${settings.reminders.endHour}:00`
                     : 'Receive notifications to drink water'}
@@ -234,19 +287,19 @@ export function SettingsScreen() {
               <Switch
                 value={settings.reminders.enabled}
                 onValueChange={handleToggleReminders}
-                trackColor={{ false: COLORS.border, true: COLORS.primaryMuted }}
-                thumbColor={settings.reminders.enabled ? COLORS.primary : COLORS.textTertiary}
+                trackColor={{ false: colors.border, true: colors.primaryMuted }}
+                thumbColor={settings.reminders.enabled ? colors.primary : colors.textTertiary}
               />
             </View>
             {settings.reminders.enabled && (
               <TouchableOpacity
-                style={styles.intervalRow}
+                style={[styles.intervalRow, dynamicStyles.intervalRow]}
                 onPress={() => setReminderModalVisible(true)}
               >
-                <Text style={styles.settingLabel}>Frequency</Text>
+                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Frequency</Text>
                 <View style={styles.settingRight}>
-                  <Text style={styles.settingValue}>{getIntervalLabel()}</Text>
-                  <Text style={styles.chevron}>›</Text>
+                  <Text style={[styles.settingValue, dynamicStyles.settingValue]}>{getIntervalLabel()}</Text>
+                  <Text style={[styles.chevron, dynamicStyles.chevron]}>›</Text>
                 </View>
               </TouchableOpacity>
             )}
@@ -255,11 +308,11 @@ export function SettingsScreen() {
 
         {/* Sound */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SOUND</Text>
-          <View style={styles.settingRow}>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>SOUND</Text>
+          <View style={[styles.settingRow, dynamicStyles.settingRow]}>
             <View>
-              <Text style={styles.settingLabel}>Sound Effects</Text>
-              <Text style={styles.reminderSubtext}>Play sound when logging water</Text>
+              <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Sound Effects</Text>
+              <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>Play sound when logging water</Text>
             </View>
             <Switch
               value={settings.soundEnabled}
@@ -272,24 +325,24 @@ export function SettingsScreen() {
 
         {/* Appearance */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>APPEARANCE</Text>
-          <View style={[styles.settingRow, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Theme</Text>
-            <View style={[styles.segmentedControl, { backgroundColor: colors.background }]}>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>APPEARANCE</Text>
+          <View style={[styles.settingRow, dynamicStyles.settingRow]}>
+            <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Theme</Text>
+            <View style={[styles.segmentedControl, dynamicStyles.segmentedControl]}>
               {THEME_OPTIONS.map((option) => (
                 <TouchableOpacity
                   key={option.value}
                   style={[
                     styles.segment,
-                    settings.themeMode === option.value && [styles.segmentActive, { backgroundColor: colors.surface }],
+                    settings.themeMode === option.value && [styles.segmentActive, dynamicStyles.segmentActive],
                   ]}
                   onPress={() => setThemeMode(option.value)}
                 >
                   <Text
                     style={[
                       styles.segmentText,
-                      { color: colors.textSecondary },
-                      settings.themeMode === option.value && { color: colors.text },
+                      dynamicStyles.segmentText,
+                      settings.themeMode === option.value && dynamicStyles.segmentTextActive,
                     ]}
                   >
                     {option.label}
@@ -303,28 +356,28 @@ export function SettingsScreen() {
         {/* Profile */}
         {profile && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>PROFILE</Text>
-            <View style={styles.profileCard}>
+            <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>PROFILE</Text>
+            <View style={[styles.profileCard, dynamicStyles.profileCard]}>
               <View style={styles.profileGrid}>
                 <View style={styles.profileItem}>
-                  <Text style={styles.profileValue}>{profile.age}</Text>
-                  <Text style={styles.profileLabel}>Age</Text>
+                  <Text style={[styles.profileValue, dynamicStyles.profileValue]}>{profile.age}</Text>
+                  <Text style={[styles.profileLabel, dynamicStyles.profileLabel]}>Age</Text>
                 </View>
                 <View style={styles.profileItem}>
-                  <Text style={styles.profileValue}>
+                  <Text style={[styles.profileValue, dynamicStyles.profileValue]}>
                     {profile.sex.charAt(0).toUpperCase() + profile.sex.slice(1)}
                   </Text>
-                  <Text style={styles.profileLabel}>Sex</Text>
+                  <Text style={[styles.profileLabel, dynamicStyles.profileLabel]}>Sex</Text>
                 </View>
                 <View style={styles.profileItem}>
-                  <Text style={styles.profileValue}>
+                  <Text style={[styles.profileValue, dynamicStyles.profileValue]}>
                     {formatWeight(profile.weightKg, settings.unitSystem)}
                   </Text>
-                  <Text style={styles.profileLabel}>Weight</Text>
+                  <Text style={[styles.profileLabel, dynamicStyles.profileLabel]}>Weight</Text>
                 </View>
                 <View style={styles.profileItem}>
-                  <Text style={styles.profileValue}>{getActivityLabel()}</Text>
-                  <Text style={styles.profileLabel}>Activity</Text>
+                  <Text style={[styles.profileValue, dynamicStyles.profileValue]}>{getActivityLabel()}</Text>
+                  <Text style={[styles.profileLabel, dynamicStyles.profileLabel]}>Activity</Text>
                 </View>
               </View>
             </View>
@@ -334,37 +387,37 @@ export function SettingsScreen() {
         {/* Calculation Breakdown */}
         {profile && profile.useCalculatedGoal && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>HOW YOUR GOAL IS CALCULATED</Text>
-            <View style={styles.breakdownCard}>
+            <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>HOW YOUR GOAL IS CALCULATED</Text>
+            <View style={[styles.breakdownCard, dynamicStyles.breakdownCard]}>
               {(() => {
                 const breakdown = getCalculationBreakdown(profile);
                 return (
                   <View style={styles.breakdownList}>
                     <View style={styles.breakdownRow}>
-                      <Text style={styles.breakdownLabel}>
+                      <Text style={[styles.breakdownLabel, dynamicStyles.breakdownLabel]}>
                         Base ({profile.weightKg}kg × 33ml)
                       </Text>
-                      <Text style={styles.breakdownValue}>{breakdown.baseAmount}ml</Text>
+                      <Text style={[styles.breakdownValue, dynamicStyles.breakdownValue]}>{breakdown.baseAmount}ml</Text>
                     </View>
                     {breakdown.sexAdjustment !== 'none' && (
                       <View style={styles.breakdownRow}>
-                        <Text style={styles.breakdownLabel}>Sex adjustment</Text>
-                        <Text style={styles.breakdownValue}>{breakdown.sexAdjustment}</Text>
+                        <Text style={[styles.breakdownLabel, dynamicStyles.breakdownLabel]}>Sex adjustment</Text>
+                        <Text style={[styles.breakdownValue, dynamicStyles.breakdownValue]}>{breakdown.sexAdjustment}</Text>
                       </View>
                     )}
                     {breakdown.ageAdjustment !== 'none' && (
                       <View style={styles.breakdownRow}>
-                        <Text style={styles.breakdownLabel}>Age adjustment</Text>
-                        <Text style={styles.breakdownValue}>{breakdown.ageAdjustment}</Text>
+                        <Text style={[styles.breakdownLabel, dynamicStyles.breakdownLabel]}>Age adjustment</Text>
+                        <Text style={[styles.breakdownValue, dynamicStyles.breakdownValue]}>{breakdown.ageAdjustment}</Text>
                       </View>
                     )}
                     <View style={styles.breakdownRow}>
-                      <Text style={styles.breakdownLabel}>Activity level</Text>
-                      <Text style={styles.breakdownValue}>{breakdown.activityLabel}</Text>
+                      <Text style={[styles.breakdownLabel, dynamicStyles.breakdownLabel]}>Activity level</Text>
+                      <Text style={[styles.breakdownValue, dynamicStyles.breakdownValue]}>{breakdown.activityLabel}</Text>
                     </View>
-                    <View style={[styles.breakdownRow, styles.breakdownTotal]}>
-                      <Text style={styles.breakdownTotalLabel}>Recommended</Text>
-                      <Text style={styles.breakdownTotalValue}>
+                    <View style={[styles.breakdownRow, styles.breakdownTotal, dynamicStyles.breakdownTotal]}>
+                      <Text style={[styles.breakdownTotalLabel, dynamicStyles.breakdownTotalLabel]}>Recommended</Text>
+                      <Text style={[styles.breakdownTotalValue, dynamicStyles.breakdownTotalValue]}>
                         {mlToDisplay(breakdown.finalAmount, settings.unitSystem)}
                       </Text>
                     </View>
@@ -372,7 +425,7 @@ export function SettingsScreen() {
                 );
               })()}
             </View>
-            <Text style={styles.disclaimer}>
+            <Text style={[styles.disclaimer, dynamicStyles.disclaimer]}>
               This is a general guideline based on common recommendations, not medical advice.
               Individual needs vary based on climate, health conditions, and other factors.
             </Text>
@@ -381,31 +434,31 @@ export function SettingsScreen() {
 
         {/* Data */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>DATA</Text>
-          <TouchableOpacity style={styles.settingRow} onPress={handleResetData}>
-            <Text style={styles.dangerText}>Reset All Data</Text>
-            <Text style={styles.chevron}>›</Text>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>DATA</Text>
+          <TouchableOpacity style={[styles.settingRow, dynamicStyles.settingRow]} onPress={handleResetData}>
+            <Text style={[styles.dangerText, dynamicStyles.dangerText]}>Reset All Data</Text>
+            <Text style={[styles.chevron, dynamicStyles.chevron]}>›</Text>
           </TouchableOpacity>
         </View>
 
         {/* Debug Tools - tap version to reveal */}
         {showDebug && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>DEBUG TOOLS</Text>
-            <View style={styles.debugCard}>
-              <Text style={styles.debugDescription}>
+            <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>DEBUG TOOLS</Text>
+            <View style={[styles.debugCard, dynamicStyles.debugCard]}>
+              <Text style={[styles.debugDescription, dynamicStyles.debugDescription]}>
                 Load mock data to test different app states
               </Text>
               {Object.entries(MOCK_PRESETS).map(([key, preset]) => (
                 <TouchableOpacity
                   key={key}
-                  style={styles.debugButton}
+                  style={[styles.debugButton, dynamicStyles.debugButton]}
                   onPress={() => {
                     loadMockData(preset.todayEntries, preset.historyDays);
                     Alert.alert('Mock Data Loaded', preset.description);
                   }}
                 >
-                  <Text style={styles.debugButtonText}>{preset.description}</Text>
+                  <Text style={[styles.debugButtonText, dynamicStyles.debugButtonText]}>{preset.description}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -418,9 +471,9 @@ export function SettingsScreen() {
           onPress={() => setShowDebug(!showDebug)}
           activeOpacity={0.8}
         >
-          <Text style={styles.appName}>WaterYouSay?</Text>
-          <Text style={styles.version}>Version 1.0.0</Text>
-          {showDebug && <Text style={styles.debugLabel}>Debug Mode Active</Text>}
+          <Text style={[styles.appName, dynamicStyles.appName]}>WaterYouSay?</Text>
+          <Text style={[styles.version, dynamicStyles.version]}>Version 1.0.0</Text>
+          {showDebug && <Text style={[styles.debugLabel, dynamicStyles.debugLabel]}>Debug Mode Active</Text>}
         </TouchableOpacity>
       </ScrollView>
 
@@ -432,32 +485,32 @@ export function SettingsScreen() {
         onRequestClose={() => setGoalModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Daily Goal</Text>
+          <View style={[styles.modalContent, dynamicStyles.modalContent]}>
+            <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>Daily Goal</Text>
             <View style={styles.goalInputWrapper}>
               <TextInput
-                style={styles.goalInput}
+                style={[styles.goalInput, dynamicStyles.goalInput]}
                 value={newGoal}
                 onChangeText={setNewGoal}
                 keyboardType="numeric"
                 placeholder="2500"
-                placeholderTextColor={COLORS.textTertiary}
+                placeholderTextColor={colors.textTertiary}
                 autoFocus
               />
-              <Text style={styles.goalUnit}>ml</Text>
+              <Text style={[styles.goalUnit, dynamicStyles.goalUnit]}>ml</Text>
             </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalCancelButton}
+                style={[styles.modalCancelButton, dynamicStyles.modalCancelButton]}
                 onPress={() => setGoalModalVisible(false)}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={[styles.modalCancelText, dynamicStyles.modalCancelText]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalSaveButton}
+                style={[styles.modalSaveButton, dynamicStyles.modalSaveButton]}
                 onPress={handleSaveGoal}
               >
-                <Text style={styles.modalSaveText}>Save</Text>
+                <Text style={[styles.modalSaveText, dynamicStyles.modalSaveText]}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -472,22 +525,24 @@ export function SettingsScreen() {
         onRequestClose={() => setReminderModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Reminder Frequency</Text>
+          <View style={[styles.modalContent, dynamicStyles.modalContent]}>
+            <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>Reminder Frequency</Text>
             <View style={styles.intervalOptions}>
               {INTERVAL_OPTIONS.map((option) => (
                 <TouchableOpacity
                   key={option.value}
                   style={[
                     styles.intervalOption,
-                    settings.reminders.intervalHours === option.value && styles.intervalOptionActive,
+                    dynamicStyles.intervalOption,
+                    settings.reminders.intervalHours === option.value && dynamicStyles.intervalOptionActive,
                   ]}
                   onPress={() => handleSetInterval(option.value)}
                 >
                   <Text
                     style={[
                       styles.intervalOptionText,
-                      settings.reminders.intervalHours === option.value && styles.intervalOptionTextActive,
+                      dynamicStyles.intervalOptionText,
+                      settings.reminders.intervalHours === option.value && dynamicStyles.intervalOptionTextActive,
                     ]}
                   >
                     {option.label}
@@ -496,10 +551,10 @@ export function SettingsScreen() {
               ))}
             </View>
             <TouchableOpacity
-              style={styles.modalCancelButton}
+              style={[styles.modalCancelButton, dynamicStyles.modalCancelButton]}
               onPress={() => setReminderModalVisible(false)}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={[styles.modalCancelText, dynamicStyles.modalCancelText]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -513,36 +568,36 @@ export function SettingsScreen() {
         onRequestClose={() => setQuickAddModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Quick Add Buttons</Text>
-            <Text style={styles.quickAddHint}>Enter 3 amounts in milliliters</Text>
+          <View style={[styles.modalContent, dynamicStyles.modalContent]}>
+            <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>Quick Add Buttons</Text>
+            <Text style={[styles.quickAddHint, dynamicStyles.quickAddHint]}>Enter 3 amounts in milliliters</Text>
             <View style={styles.quickAddInputs}>
               {editingAmounts.map((amount, index) => (
                 <View key={index} style={styles.quickAddInputRow}>
                   <TextInput
-                    style={styles.quickAddInput}
+                    style={[styles.quickAddInput, dynamicStyles.quickAddInput]}
                     value={amount}
                     onChangeText={(value) => updateEditingAmount(index, value)}
                     keyboardType="numeric"
                     placeholder={`Amount ${index + 1}`}
-                    placeholderTextColor={COLORS.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                   />
-                  <Text style={styles.quickAddUnit}>ml</Text>
+                  <Text style={[styles.quickAddUnit, dynamicStyles.quickAddUnit]}>ml</Text>
                 </View>
               ))}
             </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalCancelButton}
+                style={[styles.modalCancelButton, dynamicStyles.modalCancelButton]}
                 onPress={() => setQuickAddModalVisible(false)}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={[styles.modalCancelText, dynamicStyles.modalCancelText]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalSaveButton}
+                style={[styles.modalSaveButton, dynamicStyles.modalSaveButton]}
                 onPress={handleSaveQuickAddAmounts}
               >
-                <Text style={styles.modalSaveText}>Save</Text>
+                <Text style={[styles.modalSaveText, dynamicStyles.modalSaveText]}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -555,7 +610,6 @@ export function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   header: {
     paddingHorizontal: 24,
@@ -565,7 +619,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: '700',
-    color: COLORS.text,
     letterSpacing: -0.5,
   },
   scrollContent: {
@@ -578,12 +631,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textSecondary,
     letterSpacing: 0.5,
     marginBottom: 12,
   },
   settingRow: {
-    backgroundColor: COLORS.surface,
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 14,
@@ -602,7 +653,6 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 17,
-    color: COLORS.text,
   },
   settingRight: {
     flexDirection: 'row',
@@ -611,16 +661,13 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontSize: 17,
-    color: COLORS.textSecondary,
   },
   chevron: {
     fontSize: 20,
-    color: COLORS.textTertiary,
     fontWeight: '300',
   },
   segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: COLORS.background,
     borderRadius: 10,
     padding: 3,
   },
@@ -630,7 +677,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   segmentActive: {
-    backgroundColor: COLORS.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
@@ -638,7 +684,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   reminderCard: {
-    backgroundColor: COLORS.surface,
     borderRadius: 14,
     overflow: 'hidden',
   },
@@ -651,7 +696,6 @@ const styles = StyleSheet.create({
   },
   reminderSubtext: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     marginTop: 2,
   },
   intervalRow: {
@@ -661,7 +705,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   intervalOptions: {
     marginBottom: 16,
@@ -670,24 +713,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: COLORS.background,
     marginBottom: 8,
-  },
-  intervalOptionActive: {
-    backgroundColor: COLORS.primary,
   },
   intervalOptionText: {
     fontSize: 16,
-    color: COLORS.text,
     textAlign: 'center',
-  },
-  intervalOptionTextActive: {
-    color: COLORS.surface,
-    fontWeight: '600',
   },
   quickAddHint: {
     fontSize: 14,
-    color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -701,30 +734,22 @@ const styles = StyleSheet.create({
   },
   quickAddInput: {
     flex: 1,
-    backgroundColor: COLORS.background,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 10,
     fontSize: 18,
-    color: COLORS.text,
     textAlign: 'center',
   },
   quickAddUnit: {
     fontSize: 16,
-    color: COLORS.textSecondary,
     marginLeft: 12,
     width: 30,
   },
   segmentText: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.textSecondary,
-  },
-  segmentTextActive: {
-    color: COLORS.text,
   },
   profileCard: {
-    backgroundColor: COLORS.surface,
     padding: 20,
     borderRadius: 14,
   },
@@ -739,15 +764,12 @@ const styles = StyleSheet.create({
   profileValue: {
     fontSize: 17,
     fontWeight: '600',
-    color: COLORS.text,
     marginBottom: 4,
   },
   profileLabel: {
     fontSize: 14,
-    color: COLORS.textSecondary,
   },
   breakdownCard: {
-    backgroundColor: COLORS.surface,
     padding: 16,
     borderRadius: 14,
   },
@@ -761,39 +783,32 @@ const styles = StyleSheet.create({
   },
   breakdownLabel: {
     fontSize: 15,
-    color: COLORS.textSecondary,
   },
   breakdownValue: {
     fontSize: 15,
     fontWeight: '500',
-    color: COLORS.text,
   },
   breakdownTotal: {
     marginTop: 8,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   breakdownTotalLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text,
   },
   breakdownTotalValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.primary,
   },
   disclaimer: {
     fontSize: 13,
-    color: COLORS.textTertiary,
     lineHeight: 18,
     marginTop: 12,
     paddingHorizontal: 4,
   },
   dangerText: {
     fontSize: 17,
-    color: COLORS.error,
   },
   aboutSection: {
     alignItems: 'center',
@@ -803,31 +818,25 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 17,
     fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   version: {
     fontSize: 14,
-    color: COLORS.textTertiary,
     marginTop: 4,
   },
   debugLabel: {
     fontSize: 12,
-    color: COLORS.primary,
     marginTop: 8,
     fontWeight: '500',
   },
   debugCard: {
-    backgroundColor: COLORS.surface,
     padding: 16,
     borderRadius: 14,
   },
   debugDescription: {
     fontSize: 14,
-    color: COLORS.textSecondary,
     marginBottom: 16,
   },
   debugButton: {
-    backgroundColor: COLORS.background,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
@@ -835,7 +844,6 @@ const styles = StyleSheet.create({
   },
   debugButtonText: {
     fontSize: 15,
-    color: COLORS.text,
     fontWeight: '500',
   },
   modalOverlay: {
@@ -846,7 +854,6 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalContent: {
-    backgroundColor: COLORS.surface,
     borderRadius: 20,
     padding: 28,
     width: '100%',
@@ -855,7 +862,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: COLORS.text,
     textAlign: 'center',
     marginBottom: 24,
     letterSpacing: -0.3,
@@ -868,7 +874,6 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   goalInput: {
-    backgroundColor: COLORS.background,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 14,
@@ -876,11 +881,9 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     textAlign: 'center',
     width: 140,
-    color: COLORS.text,
   },
   goalUnit: {
     fontSize: 18,
-    color: COLORS.textTertiary,
     fontWeight: '500',
   },
   modalButtons: {
@@ -892,11 +895,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    backgroundColor: COLORS.background,
   },
   modalCancelText: {
     fontSize: 17,
-    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   modalSaveButton: {
@@ -904,11 +905,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    backgroundColor: COLORS.text,
   },
   modalSaveText: {
     fontSize: 17,
-    color: COLORS.surface,
     fontWeight: '600',
   },
 });

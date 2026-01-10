@@ -1,14 +1,32 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
-import { COLORS } from '../constants';
+import { useTheme } from '../context/ThemeContext';
 import { mlToDisplay } from '../utils/units';
 import { calculateProgress } from '../utils/calculations';
 
 export function HistoryScreen() {
   const { state } = useWater();
+  const { colors } = useTheme();
   const { history, settings, todayLog } = state;
+
+  // Dynamic styles based on theme
+  const dynamicStyles = useMemo(() => ({
+    container: { backgroundColor: colors.background },
+    title: { color: colors.text },
+    dateText: { color: colors.textSecondary },
+    goalBadge: { backgroundColor: colors.success + '18' },
+    goalBadgeText: { color: colors.success },
+    amountText: { color: colors.text },
+    percentText: { color: colors.textSecondary },
+    progressBarContainer: { backgroundColor: colors.border },
+    progressBar: { backgroundColor: colors.primary },
+    progressBarSuccess: { backgroundColor: colors.success },
+    historyItem: { borderBottomColor: colors.border },
+    emptyText: { color: colors.textSecondary },
+    emptySubtext: { color: colors.textTertiary },
+  }), [colors]);
 
   const allLogs = [
     { ...todayLog, isToday: true },
@@ -36,22 +54,22 @@ export function HistoryScreen() {
 
   if (allLogs.length === 0 || (allLogs.length === 1 && todayLog.entries.length === 0)) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
         <View style={styles.header}>
-          <Text style={styles.title}>History</Text>
+          <Text style={[styles.title, dynamicStyles.title]}>History</Text>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No history yet</Text>
-          <Text style={styles.emptySubtext}>Start tracking your water intake</Text>
+          <Text style={[styles.emptyText, dynamicStyles.emptyText]}>No history yet</Text>
+          <Text style={[styles.emptySubtext, dynamicStyles.emptySubtext]}>Start tracking your water intake</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>History</Text>
+        <Text style={[styles.title, dynamicStyles.title]}>History</Text>
       </View>
 
       <FlatList
@@ -64,32 +82,32 @@ export function HistoryScreen() {
           const metGoal = item.totalMl >= settings.dailyGoalMl;
 
           return (
-            <View style={styles.historyItem}>
+            <View style={[styles.historyItem, dynamicStyles.historyItem]}>
               <View style={styles.itemHeader}>
-                <Text style={styles.dateText}>
+                <Text style={[styles.dateText, dynamicStyles.dateText]}>
                   {formatDate(item.date, 'isToday' in item && item.isToday)}
                 </Text>
                 {metGoal && (
-                  <View style={styles.goalBadge}>
-                    <Text style={styles.goalBadgeText}>Goal met</Text>
+                  <View style={[styles.goalBadge, dynamicStyles.goalBadge]}>
+                    <Text style={[styles.goalBadgeText, dynamicStyles.goalBadgeText]}>Goal met</Text>
                   </View>
                 )}
               </View>
 
               <View style={styles.statsRow}>
-                <Text style={styles.amountText}>
+                <Text style={[styles.amountText, dynamicStyles.amountText]}>
                   {mlToDisplay(item.totalMl, settings.unitSystem)}
                 </Text>
-                <Text style={styles.percentText}>{Math.round(progress)}%</Text>
+                <Text style={[styles.percentText, dynamicStyles.percentText]}>{Math.round(progress)}%</Text>
               </View>
 
-              <View style={styles.progressBarContainer}>
+              <View style={[styles.progressBarContainer, dynamicStyles.progressBarContainer]}>
                 <View
                   style={[
                     styles.progressBar,
                     {
                       width: `${Math.min(progress, 100)}%`,
-                      backgroundColor: metGoal ? COLORS.success : COLORS.primary,
+                      backgroundColor: metGoal ? colors.success : colors.primary,
                     },
                   ]}
                 />
@@ -105,7 +123,6 @@ export function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   header: {
     paddingHorizontal: 24,
@@ -115,7 +132,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: '700',
-    color: COLORS.text,
     letterSpacing: -0.5,
   },
   listContent: {
@@ -125,7 +141,6 @@ const styles = StyleSheet.create({
   historyItem: {
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -136,10 +151,8 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 15,
     fontWeight: '500',
-    color: COLORS.textSecondary,
   },
   goalBadge: {
-    backgroundColor: COLORS.success + '18',
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
@@ -147,7 +160,6 @@ const styles = StyleSheet.create({
   goalBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.success,
   },
   statsRow: {
     flexDirection: 'row',
@@ -158,17 +170,14 @@ const styles = StyleSheet.create({
   amountText: {
     fontSize: 28,
     fontWeight: '300',
-    color: COLORS.text,
     letterSpacing: -0.5,
   },
   percentText: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.textSecondary,
   },
   progressBarContainer: {
     height: 4,
-    backgroundColor: COLORS.border,
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -185,11 +194,9 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '500',
-    color: COLORS.textSecondary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 15,
-    color: COLORS.textTertiary,
   },
 });
