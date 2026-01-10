@@ -21,7 +21,7 @@ import { UndoToast } from '../components/UndoToast';
 import { calculateProgress } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, successFeedback, warningFeedback } from '../utils/haptics';
-import { loadSounds, playWaterSound } from '../utils/sounds';
+import { loadSounds, playWaterSound, playRemoveSound } from '../utils/sounds';
 
 export function HomeScreen() {
   const { state, addWater, removeEntry, clearToday, setUnitSystem } = useWater();
@@ -102,6 +102,9 @@ export function HomeScreen() {
     if (entry) {
       setLastDeletedAmount(entry.amountMl);
       warningFeedback();
+      if (settings.soundEnabled) {
+        playRemoveSound();
+      }
       removeEntry(entryId);
       setUndoToastVisible(true);
     }
