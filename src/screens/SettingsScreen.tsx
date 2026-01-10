@@ -15,10 +15,12 @@ import { COLORS, ACTIVITY_LEVELS } from '../constants';
 import { mlToDisplay, formatWeight } from '../utils/units';
 import { clearAllData } from '../utils/storage';
 import { getCalculationBreakdown } from '../utils/calculations';
+import { MOCK_PRESETS } from '../utils/mockData';
 
 export function SettingsScreen() {
-  const { state, setDailyGoal, setUnitSystem, resetOnboarding } = useWater();
+  const { state, setDailyGoal, setUnitSystem, resetOnboarding, loadMockData } = useWater();
   const { settings, profile } = state;
+  const [showDebug, setShowDebug] = useState(false);
 
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [newGoal, setNewGoal] = useState(settings.dailyGoalMl.toString());
@@ -214,6 +216,41 @@ export function SettingsScreen() {
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Debug Tools - tap version to reveal */}
+        {showDebug && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>DEBUG TOOLS</Text>
+            <View style={styles.debugCard}>
+              <Text style={styles.debugDescription}>
+                Load mock data to test different app states
+              </Text>
+              {Object.entries(MOCK_PRESETS).map(([key, preset]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={styles.debugButton}
+                  onPress={() => {
+                    loadMockData(preset.todayEntries, preset.historyDays);
+                    Alert.alert('Mock Data Loaded', preset.description);
+                  }}
+                >
+                  <Text style={styles.debugButtonText}>{preset.description}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* About */}
+        <TouchableOpacity
+          style={styles.aboutSection}
+          onPress={() => setShowDebug(!showDebug)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.appName}>WaterYouSay?</Text>
+          <Text style={styles.version}>Version 1.0.0</Text>
+          {showDebug && <Text style={styles.debugLabel}>Debug Mode Active</Text>}
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Edit Goal Modal */}
@@ -429,6 +466,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textTertiary,
     marginTop: 4,
+  },
+  debugLabel: {
+    fontSize: 12,
+    color: COLORS.primary,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  debugCard: {
+    backgroundColor: COLORS.surface,
+    padding: 16,
+    borderRadius: 14,
+  },
+  debugDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 16,
+  },
+  debugButton: {
+    backgroundColor: COLORS.background,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  debugButtonText: {
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,

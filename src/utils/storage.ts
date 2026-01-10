@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, AppSettings, DailyLog } from '../types';
+import { UserProfile, AppSettings, DailyLog, HistoryEntry } from '../types';
 import { STORAGE_KEYS, DEFAULT_DAILY_GOAL_ML } from '../constants';
 
 export async function saveProfile(profile: UserProfile): Promise<void> {
@@ -96,13 +96,21 @@ export async function archiveLog(log: DailyLog): Promise<void> {
   }
 }
 
-export async function loadHistory(): Promise<DailyLog[]> {
+export async function loadHistory(): Promise<HistoryEntry[]> {
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.HISTORY);
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error('Error loading history:', error);
     return [];
+  }
+}
+
+export async function saveHistory(history: HistoryEntry[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+  } catch (error) {
+    console.error('Error saving history:', error);
   }
 }
 

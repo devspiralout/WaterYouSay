@@ -6,6 +6,7 @@ import {
   UnitSystem,
   WaterEntry,
   DailyLog,
+  HistoryEntry,
 } from '../types';
 import { DEFAULT_DAILY_GOAL_ML } from '../constants';
 import {
@@ -16,8 +17,10 @@ import {
   saveTodayLog,
   loadTodayLog,
   loadHistory,
+  saveHistory,
 } from '../utils/storage';
 import { getTodayDateString, generateEntryId, calculateDailyWaterGoal } from '../utils/calculations';
+import { generateMockTodayLog, generateMockHistory } from '../utils/mockData';
 
 type Action =
   | { type: 'LOAD_STATE'; payload: Partial<AppState> }
@@ -27,7 +30,8 @@ type Action =
   | { type: 'SET_DAILY_GOAL'; payload: { goalMl: number } }
   | { type: 'SET_UNIT_SYSTEM'; payload: { system: UnitSystem } }
   | { type: 'COMPLETE_ONBOARDING' }
-  | { type: 'RESET_ONBOARDING' };
+  | { type: 'RESET_ONBOARDING' }
+  | { type: 'LOAD_MOCK_DATA'; payload: { todayLog: DailyLog; history: HistoryEntry[] } };
 
 const initialState: AppState = {
   profile: null,
@@ -135,6 +139,13 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
 
+    case 'LOAD_MOCK_DATA':
+      return {
+        ...state,
+        todayLog: action.payload.todayLog,
+        history: action.payload.history,
+      };
+
     default:
       return state;
   }
@@ -207,6 +218,16 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     },
     resetOnboarding: () => {
       dispatch({ type: 'RESET_ONBOARDING' });
+    },
+    loadMockData: async (todayEntries: number, historyDays: number) => {
+      const todayLog = generateMockTodayLog(todayEntries);
+      const history = generateMockHistory(historyDays, state.settings.dailyGoalMl);
+
+      // Save to storage
+      await saveTodayLog(todayLog);
+      await saveHistory(history);
+
+      dispatch({ type: 'LOAD_MOCK_DATA', payload: { todayLog, history } });
     },
   };
 

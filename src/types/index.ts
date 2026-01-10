@@ -24,6 +24,11 @@ export interface DailyLog {
   totalMl: number;
 }
 
+export interface HistoryEntry {
+  date: string; // YYYY-MM-DD
+  totalMl: number;
+}
+
 export interface AppSettings {
   unitSystem: UnitSystem;
   dailyGoalMl: number;
@@ -34,7 +39,7 @@ export interface AppState {
   profile: UserProfile | null;
   settings: AppSettings;
   todayLog: DailyLog;
-  history: DailyLog[];
+  history: HistoryEntry[];
 }
 
 export interface WaterContextType {
@@ -46,4 +51,5 @@ export interface WaterContextType {
   setUnitSystem: (system: UnitSystem) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
+  loadMockData: (todayEntries: number, historyDays: number) => Promise<void>;
 }
