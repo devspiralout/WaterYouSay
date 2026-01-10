@@ -12,6 +12,8 @@ import { HistoryScreen } from './src/screens/HistoryScreen';
 import { AchievementsScreen } from './src/screens/AchievementsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { AchievementUnlockModal } from './src/components/AchievementUnlockModal';
+import { ACHIEVEMENTS } from './src/constants';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -65,8 +67,12 @@ function MainTabs() {
 }
 
 function AppNavigator() {
-  const { state } = useWater();
+  const { state, pendingAchievement, clearPendingAchievement } = useWater();
   const { isDark } = useTheme();
+
+  const achievementToShow = pendingAchievement
+    ? ACHIEVEMENTS.find(a => a.id === pendingAchievement) || null
+    : null;
 
   return (
     <>
@@ -78,6 +84,11 @@ function AppNavigator() {
         )}
       </Stack.Navigator>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      <AchievementUnlockModal
+        visible={!!pendingAchievement}
+        achievement={achievementToShow}
+        onDismiss={clearPendingAchievement}
+      />
     </>
   );
 }

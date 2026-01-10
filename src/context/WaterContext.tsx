@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, ReactNode } from 'react';
 import {
   AppState,
   WaterContextType,
@@ -239,6 +239,7 @@ const WaterContext = createContext<WaterContextType | undefined>(undefined);
 
 export function WaterProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [pendingAchievement, setPendingAchievement] = useState<AchievementId | null>(null);
 
   // Load saved data on mount
   useEffect(() => {
@@ -298,11 +299,17 @@ export function WaterProvider({ children }: { children: ReactNode }) {
       unlockedAchievements: state.unlockedAchievements,
     });
 
-    // Unlock each new achievement
-    newAchievements.forEach(id => {
-      dispatch({ type: 'UNLOCK_ACHIEVEMENT', payload: { id } });
-    });
-  }, [state.todayLog, state.history, state.settings.dailyGoalMl, state.unlockedAchievements]);
+    // Unlock each new achievement and queue first one for display
+    if (newAchievements.length > 0) {
+      newAchievements.forEach(id => {
+        dispatch({ type: 'UNLOCK_ACHIEVEMENT', payload: { id } });
+      });
+      // Show popup for the first new achievement
+      if (!pendingAchievement) {
+        setPendingAchievement(newAchievements[0]);
+      }
+    }
+  }, [state.todayLog, state.history, state.settings.dailyGoalMl, state.unlockedAchievements, pendingAchievement]);
 
   const contextValue: WaterContextType = {
     state,
@@ -344,6 +351,10 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     },
     unlockAchievement: (id: AchievementId) => {
       dispatch({ type: 'UNLOCK_ACHIEVEMENT', payload: { id } });
+    },
+    pendingAchievement,
+    clearPendingAchievement: () => {
+      setPendingAchievement(null);
     },
     loadMockData: async (todayEntries: number, historyDays: number) => {
       const todayLog = generateMockTodayLog(todayEntries);

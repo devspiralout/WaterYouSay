@@ -97,5 +97,7 @@ export interface WaterContextType {
   resetOnboarding: () => void;
   clearToday: () => void;
   unlockAchievement: (id: AchievementId) => void;
+  pendingAchievement: AchievementId | null;
+  clearPendingAchievement: () => void;
   loadMockData: (todayEntries: number, historyDays: number) => Promise<void>;
 }
