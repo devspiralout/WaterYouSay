@@ -6,27 +6,29 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { WaterProvider, useWater } from './src/context/WaterContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import { COLORS } from './src/constants';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function MainTabs() {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarIcon: () => null,
         tabBarShowLabel: true,
-        tabBarActiveTintColor: COLORS.text,
-        tabBarInactiveTintColor: COLORS.textTertiary,
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: {
-          backgroundColor: COLORS.surface,
-          borderTopColor: COLORS.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
         },
         tabBarLabelStyle: {
@@ -45,15 +47,19 @@ function MainTabs() {
 
 function AppNavigator() {
   const { state } = useWater();
+  const { isDark } = useTheme();
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {state.settings.onboardingComplete ? (
-        <Stack.Screen name="Main" component={MainTabs} />
-      ) : (
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      )}
-    </Stack.Navigator>
+    <>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {state.settings.onboardingComplete ? (
+          <Stack.Screen name="Main" component={MainTabs} />
+        ) : (
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        )}
+      </Stack.Navigator>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </>
   );
 }
 
@@ -61,10 +67,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <WaterProvider>
-        <NavigationContainer>
-          <AppNavigator />
-          <StatusBar style="dark" />
-        </NavigationContainer>
+        <ThemeProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </ThemeProvider>
       </WaterProvider>
     </SafeAreaProvider>
   );

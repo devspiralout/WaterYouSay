@@ -4,6 +4,8 @@ import {
   WaterContextType,
   UserProfile,
   UnitSystem,
+  ReminderSettings,
+  ThemeMode,
   WaterEntry,
   DailyLog,
   HistoryEntry,
@@ -29,6 +31,10 @@ type Action =
   | { type: 'SET_PROFILE'; payload: { profile: UserProfile } }
   | { type: 'SET_DAILY_GOAL'; payload: { goalMl: number } }
   | { type: 'SET_UNIT_SYSTEM'; payload: { system: UnitSystem } }
+  | { type: 'SET_REMINDERS'; payload: { reminders: ReminderSettings } }
+  | { type: 'SET_QUICK_ADD_AMOUNTS'; payload: { amounts: number[] } }
+  | { type: 'SET_SOUND_ENABLED'; payload: { enabled: boolean } }
+  | { type: 'SET_THEME_MODE'; payload: { mode: ThemeMode } }
   | { type: 'COMPLETE_ONBOARDING' }
   | { type: 'RESET_ONBOARDING' }
   | { type: 'LOAD_MOCK_DATA'; payload: { todayLog: DailyLog; history: HistoryEntry[] } };
@@ -39,6 +45,15 @@ const initialState: AppState = {
     unitSystem: 'metric',
     dailyGoalMl: DEFAULT_DAILY_GOAL_ML,
     onboardingComplete: false,
+    reminders: {
+      enabled: false,
+      intervalHours: 2,
+      startHour: 8,
+      endHour: 22,
+    },
+    quickAddAmounts: [100, 250, 500],
+    soundEnabled: true,
+    themeMode: 'system',
   },
   todayLog: {
     date: getTodayDateString(),
@@ -117,6 +132,42 @@ function reducer(state: AppState, action: Action): AppState {
         settings: {
           ...state.settings,
           unitSystem: action.payload.system,
+        },
+      };
+
+    case 'SET_REMINDERS':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          reminders: action.payload.reminders,
+        },
+      };
+
+    case 'SET_QUICK_ADD_AMOUNTS':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          quickAddAmounts: action.payload.amounts,
+        },
+      };
+
+    case 'SET_SOUND_ENABLED':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          soundEnabled: action.payload.enabled,
+        },
+      };
+
+    case 'SET_THEME_MODE':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          themeMode: action.payload.mode,
         },
       };
 
@@ -212,6 +263,18 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     },
     setUnitSystem: (system: UnitSystem) => {
       dispatch({ type: 'SET_UNIT_SYSTEM', payload: { system } });
+    },
+    setReminders: (reminders: ReminderSettings) => {
+      dispatch({ type: 'SET_REMINDERS', payload: { reminders } });
+    },
+    setQuickAddAmounts: (amounts: number[]) => {
+      dispatch({ type: 'SET_QUICK_ADD_AMOUNTS', payload: { amounts } });
+    },
+    setSoundEnabled: (enabled: boolean) => {
+      dispatch({ type: 'SET_SOUND_ENABLED', payload: { enabled } });
+    },
+    setThemeMode: (mode: ThemeMode) => {
+      dispatch({ type: 'SET_THEME_MODE', payload: { mode } });
     },
     completeOnboarding: () => {
       dispatch({ type: 'COMPLETE_ONBOARDING' });

@@ -15,10 +15,12 @@ import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { IntakeLog } from '../components/IntakeLog';
 import { WaterBackground } from '../components/WaterBackground';
 import { CelebrationSplash } from '../components/CelebrationSplash';
+import { UndoToast } from '../components/UndoToast';
 import { COLORS } from '../constants';
 import { calculateProgress, calculateStreak } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, successFeedback, warningFeedback } from '../utils/haptics';
+import { loadSounds, playWaterSound } from '../utils/sounds';
 
 export function HomeScreen() {
   const { state, addWater, removeEntry, setUnitSystem } = useWater();
@@ -26,11 +28,18 @@ export function HomeScreen() {
   const [customAmount, setCustomAmount] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
   const hasShownCelebration = useRef(false);
+  const [undoToastVisible, setUndoToastVisible] = useState(false);
+  const [lastDeletedAmount, setLastDeletedAmount] = useState<number | null>(null);
 
   const { todayLog, settings, history } = state;
   const progress = calculateProgress(todayLog.totalMl, settings.dailyGoalMl);
   const streak = calculateStreak(history, settings.dailyGoalMl, todayLog.totalMl);
-  const quickAddAmounts = getQuickAddAmounts(settings.unitSystem);
+  const quickAddAmounts = getQuickAddAmounts(settings.unitSystem, settings.quickAddAmounts);
+
+  // Load sounds on mount
+  useEffect(() => {
+    loadSounds();
+  }, []);
 
   // Show celebration when goal is reached for the first time today
   useEffect(() => {
@@ -46,6 +55,9 @@ export function HomeScreen() {
 
   const handleQuickAdd = (amountMl: number) => {
     mediumTap();
+    if (settings.soundEnabled) {
+      playWaterSound();
+    }
     addWater(amountMl);
   };
 
@@ -53,6 +65,9 @@ export function HomeScreen() {
     const amount = parseInt(customAmount, 10);
     if (amount > 0) {
       mediumTap();
+      if (settings.soundEnabled) {
+        playWaterSound();
+      }
       addWater(amount);
       setCustomAmount('');
       setCustomModalVisible(false);
@@ -60,8 +75,27 @@ export function HomeScreen() {
   };
 
   const handleRemoveEntry = (entryId: string) => {
-    warningFeedback();
-    removeEntry(entryId);
+    // Find the entry to get its amount before removing
+    const entry = todayLog.entries.find(e => e.id === entryId);
+    if (entry) {
+      setLastDeletedAmount(entry.amountMl);
+      warningFeedback();
+      removeEntry(entryId);
+      setUndoToastVisible(true);
+    }
+  };
+
+  const handleUndo = () => {
+    if (lastDeletedAmount) {
+      mediumTap();
+      addWater(lastDeletedAmount);
+      setLastDeletedAmount(null);
+    }
+  };
+
+  const handleDismissUndo = () => {
+    setUndoToastVisible(false);
+    setLastDeletedAmount(null);
   };
 
   const toggleUnits = () => {
@@ -174,6 +208,14 @@ export function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Undo Toast */}
+      <UndoToast
+        visible={undoToastVisible}
+        message={lastDeletedAmount ? `Removed ${mlToDisplay(lastDeletedAmount, settings.unitSystem)}` : ''}
+        onUndo={handleUndo}
+        onDismiss={handleDismissUndo}
+      />
 
       {/* Celebration Animation - rendered last to overlay everything */}
       <CelebrationSplash

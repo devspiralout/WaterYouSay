@@ -28,11 +28,28 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
   }
 }
 
+const DEFAULT_REMINDER_SETTINGS = {
+  enabled: false,
+  intervalHours: 2,
+  startHour: 8,
+  endHour: 22,
+};
+
+const DEFAULT_QUICK_ADD_AMOUNTS = [100, 250, 500];
+
 export async function loadSettings(): Promise<AppSettings> {
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (data) {
-      return JSON.parse(data);
+      const settings = JSON.parse(data);
+      // Ensure fields exist for backward compatibility
+      return {
+        ...settings,
+        reminders: settings.reminders || DEFAULT_REMINDER_SETTINGS,
+        quickAddAmounts: settings.quickAddAmounts || DEFAULT_QUICK_ADD_AMOUNTS,
+        soundEnabled: settings.soundEnabled ?? true,
+        themeMode: settings.themeMode || 'system',
+      };
     }
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -43,6 +60,10 @@ export async function loadSettings(): Promise<AppSettings> {
     unitSystem: 'metric',
     dailyGoalMl: DEFAULT_DAILY_GOAL_ML,
     onboardingComplete: false,
+    reminders: DEFAULT_REMINDER_SETTINGS,
+    quickAddAmounts: DEFAULT_QUICK_ADD_AMOUNTS,
+    soundEnabled: true,
+    themeMode: 'system',
   };
 }
 

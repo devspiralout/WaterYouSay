@@ -61,9 +61,10 @@ export function getVolumeUnitLabel(unitSystem: UnitSystem, small: boolean = fals
 /**
  * Get quick-add amounts formatted for display
  */
-export function getQuickAddAmounts(unitSystem: UnitSystem): { ml: number; display: string }[] {
-  const amounts = [100, 250, 500];
-
+export function getQuickAddAmounts(
+  unitSystem: UnitSystem,
+  amounts: number[] = [100, 250, 500]
+): { ml: number; display: string }[] {
   return amounts.map(ml => ({
     ml,
     display: unitSystem === 'metric'

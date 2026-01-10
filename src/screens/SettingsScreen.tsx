@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,22 +8,99 @@ import {
   TextInput,
   Alert,
   Modal,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS, ACTIVITY_LEVELS } from '../constants';
+import { ThemeMode } from '../types';
 import { mlToDisplay, formatWeight } from '../utils/units';
 import { clearAllData } from '../utils/storage';
 import { getCalculationBreakdown } from '../utils/calculations';
 import { MOCK_PRESETS } from '../utils/mockData';
+import { scheduleWaterReminders, requestNotificationPermissions } from '../utils/notifications';
+
+const INTERVAL_OPTIONS = [
+  { value: 1, label: 'Every hour' },
+  { value: 2, label: 'Every 2 hours' },
+  { value: 3, label: 'Every 3 hours' },
+  { value: 4, label: 'Every 4 hours' },
+];
+
+const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+];
 
 export function SettingsScreen() {
-  const { state, setDailyGoal, setUnitSystem, resetOnboarding, loadMockData } = useWater();
+  const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, resetOnboarding, loadMockData } = useWater();
+  const { colors } = useTheme();
   const { settings, profile } = state;
   const [showDebug, setShowDebug] = useState(false);
 
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [newGoal, setNewGoal] = useState(settings.dailyGoalMl.toString());
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
+  const [quickAddModalVisible, setQuickAddModalVisible] = useState(false);
+  const [editingAmounts, setEditingAmounts] = useState<string[]>(
+    settings.quickAddAmounts.map(a => a.toString())
+  );
+
+  // Schedule reminders when settings change
+  useEffect(() => {
+    scheduleWaterReminders(settings.reminders);
+  }, [settings.reminders]);
+
+  const handleToggleReminders = async (enabled: boolean) => {
+    if (enabled) {
+      const hasPermission = await requestNotificationPermissions();
+      if (!hasPermission) {
+        Alert.alert(
+          'Notifications Disabled',
+          'Please enable notifications in your device settings to receive reminders.'
+        );
+        return;
+      }
+    }
+    setReminders({ ...settings.reminders, enabled });
+  };
+
+  const handleSetInterval = (intervalHours: number) => {
+    setReminders({ ...settings.reminders, intervalHours });
+    setReminderModalVisible(false);
+  };
+
+  const getIntervalLabel = () => {
+    const option = INTERVAL_OPTIONS.find(o => o.value === settings.reminders.intervalHours);
+    return option?.label || `Every ${settings.reminders.intervalHours} hours`;
+  };
+
+  const handleOpenQuickAddModal = () => {
+    setEditingAmounts(settings.quickAddAmounts.map(a => a.toString()));
+    setQuickAddModalVisible(true);
+  };
+
+  const handleSaveQuickAddAmounts = () => {
+    const amounts = editingAmounts
+      .map(a => parseInt(a, 10))
+      .filter(a => a > 0 && a < 10000)
+      .sort((a, b) => a - b);
+
+    if (amounts.length === 3) {
+      setQuickAddAmounts(amounts);
+      setQuickAddModalVisible(false);
+    } else {
+      Alert.alert('Invalid Amounts', 'Please enter 3 valid amounts between 1 and 9999 ml.');
+    }
+  };
+
+  const updateEditingAmount = (index: number, value: string) => {
+    const newAmounts = [...editingAmounts];
+    newAmounts[index] = value;
+    setEditingAmounts(newAmounts);
+  };
 
   const handleSaveGoal = () => {
     const goal = parseInt(newGoal, 10);
@@ -58,9 +135,9 @@ export function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
       </View>
 
       <ScrollView
@@ -71,7 +148,7 @@ export function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>GOAL</Text>
           <TouchableOpacity
-            style={styles.settingRow}
+            style={[styles.settingRow, styles.settingRowFirst]}
             onPress={() => {
               setNewGoal(settings.dailyGoalMl.toString());
               setGoalModalVisible(true);
@@ -81,6 +158,18 @@ export function SettingsScreen() {
             <View style={styles.settingRight}>
               <Text style={styles.settingValue}>
                 {mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
+              </Text>
+              <Text style={styles.chevron}>›</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingRow, styles.settingRowLast]}
+            onPress={handleOpenQuickAddModal}
+          >
+            <Text style={styles.settingLabel}>Quick Add Buttons</Text>
+            <View style={styles.settingRight}>
+              <Text style={styles.settingValue}>
+                {settings.quickAddAmounts.map(a => `${a}ml`).join(', ')}
               </Text>
               <Text style={styles.chevron}>›</Text>
             </View>
@@ -125,6 +214,88 @@ export function SettingsScreen() {
                   Imperial
                 </Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Reminders */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>REMINDERS</Text>
+          <View style={styles.reminderCard}>
+            <View style={styles.reminderRow}>
+              <View>
+                <Text style={styles.settingLabel}>Water Reminders</Text>
+                <Text style={styles.reminderSubtext}>
+                  {settings.reminders.enabled
+                    ? `Active ${settings.reminders.startHour}:00 - ${settings.reminders.endHour}:00`
+                    : 'Receive notifications to drink water'}
+                </Text>
+              </View>
+              <Switch
+                value={settings.reminders.enabled}
+                onValueChange={handleToggleReminders}
+                trackColor={{ false: COLORS.border, true: COLORS.primaryMuted }}
+                thumbColor={settings.reminders.enabled ? COLORS.primary : COLORS.textTertiary}
+              />
+            </View>
+            {settings.reminders.enabled && (
+              <TouchableOpacity
+                style={styles.intervalRow}
+                onPress={() => setReminderModalVisible(true)}
+              >
+                <Text style={styles.settingLabel}>Frequency</Text>
+                <View style={styles.settingRight}>
+                  <Text style={styles.settingValue}>{getIntervalLabel()}</Text>
+                  <Text style={styles.chevron}>›</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Sound */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>SOUND</Text>
+          <View style={styles.settingRow}>
+            <View>
+              <Text style={styles.settingLabel}>Sound Effects</Text>
+              <Text style={styles.reminderSubtext}>Play sound when logging water</Text>
+            </View>
+            <Switch
+              value={settings.soundEnabled}
+              onValueChange={setSoundEnabled}
+              trackColor={{ false: colors.border, true: colors.primaryMuted }}
+              thumbColor={settings.soundEnabled ? colors.primary : colors.textTertiary}
+            />
+          </View>
+        </View>
+
+        {/* Appearance */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>APPEARANCE</Text>
+          <View style={[styles.settingRow, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Theme</Text>
+            <View style={[styles.segmentedControl, { backgroundColor: colors.background }]}>
+              {THEME_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.segment,
+                    settings.themeMode === option.value && [styles.segmentActive, { backgroundColor: colors.surface }],
+                  ]}
+                  onPress={() => setThemeMode(option.value)}
+                >
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      { color: colors.textSecondary },
+                      settings.themeMode === option.value && { color: colors.text },
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </View>
@@ -292,6 +463,91 @@ export function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Reminder Interval Modal */}
+      <Modal
+        visible={reminderModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReminderModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Reminder Frequency</Text>
+            <View style={styles.intervalOptions}>
+              {INTERVAL_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.intervalOption,
+                    settings.reminders.intervalHours === option.value && styles.intervalOptionActive,
+                  ]}
+                  onPress={() => handleSetInterval(option.value)}
+                >
+                  <Text
+                    style={[
+                      styles.intervalOptionText,
+                      settings.reminders.intervalHours === option.value && styles.intervalOptionTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setReminderModalVisible(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Quick Add Amounts Modal */}
+      <Modal
+        visible={quickAddModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQuickAddModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Quick Add Buttons</Text>
+            <Text style={styles.quickAddHint}>Enter 3 amounts in milliliters</Text>
+            <View style={styles.quickAddInputs}>
+              {editingAmounts.map((amount, index) => (
+                <View key={index} style={styles.quickAddInputRow}>
+                  <TextInput
+                    style={styles.quickAddInput}
+                    value={amount}
+                    onChangeText={(value) => updateEditingAmount(index, value)}
+                    keyboardType="numeric"
+                    placeholder={`Amount ${index + 1}`}
+                    placeholderTextColor={COLORS.textTertiary}
+                  />
+                  <Text style={styles.quickAddUnit}>ml</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setQuickAddModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSaveButton}
+                onPress={handleSaveQuickAddAmounts}
+              >
+                <Text style={styles.modalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -335,6 +591,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  settingRowFirst: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  settingRowLast: {
+    marginTop: 1,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
   settingLabel: {
     fontSize: 17,
     color: COLORS.text,
@@ -371,6 +636,84 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
+  },
+  reminderCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  reminderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  reminderSubtext: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  intervalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  intervalOptions: {
+    marginBottom: 16,
+  },
+  intervalOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: COLORS.background,
+    marginBottom: 8,
+  },
+  intervalOptionActive: {
+    backgroundColor: COLORS.primary,
+  },
+  intervalOptionText: {
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  intervalOptionTextActive: {
+    color: COLORS.surface,
+    fontWeight: '600',
+  },
+  quickAddHint: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  quickAddInputs: {
+    marginBottom: 24,
+  },
+  quickAddInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  quickAddInput: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    fontSize: 18,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  quickAddUnit: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginLeft: 12,
+    width: 30,
   },
   segmentText: {
     fontSize: 14,

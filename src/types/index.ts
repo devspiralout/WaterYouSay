@@ -29,10 +29,23 @@ export interface HistoryEntry {
   totalMl: number;
 }
 
+export interface ReminderSettings {
+  enabled: boolean;
+  intervalHours: number;
+  startHour: number;
+  endHour: number;
+}
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+
 export interface AppSettings {
   unitSystem: UnitSystem;
   dailyGoalMl: number;
   onboardingComplete: boolean;
+  reminders: ReminderSettings;
+  quickAddAmounts: number[]; // in ml
+  soundEnabled: boolean;
+  themeMode: ThemeMode;
 }
 
 export interface AppState {
@@ -49,6 +62,10 @@ export interface WaterContextType {
   setProfile: (profile: UserProfile) => void;
   setDailyGoal: (goalMl: number) => void;
   setUnitSystem: (system: UnitSystem) => void;
+  setReminders: (reminders: ReminderSettings) => void;
+  setQuickAddAmounts: (amounts: number[]) => void;
+  setSoundEnabled: (enabled: boolean) => void;
+  setThemeMode: (mode: ThemeMode) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   loadMockData: (todayEntries: number, historyDays: number) => Promise<void>;

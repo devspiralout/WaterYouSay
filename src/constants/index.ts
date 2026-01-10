@@ -1,34 +1,66 @@
 import { ActivityLevel } from '../types';
 
-export const COLORS = {
-  // Refined minimalist palette
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+export interface ThemeColors {
+  primary: string;
+  primaryMuted: string;
+  accent: string;
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  text: string;
+  textSecondary: string;
+  textTertiary: string;
+  success: string;
+  warning: string;
+  error: string;
+  border: string;
+  divider: string;
+  streak: string;
+  water: string;
+}
+
+export const LIGHT_COLORS: ThemeColors = {
   primary: '#0A84FF',
   primaryMuted: '#B4D4FF',
   accent: '#32D74B',
-
-  // Backgrounds
   background: '#FAFAFA',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-
-  // Typography
   text: '#1C1C1E',
   textSecondary: '#8E8E93',
   textTertiary: '#AEAEB2',
-
-  // Semantic
   success: '#32D74B',
   warning: '#FF9F0A',
   error: '#FF453A',
-
-  // Borders & Dividers
   border: '#F2F2F7',
   divider: '#E5E5EA',
-
-  // Special
   streak: '#FF9F0A',
   water: '#0A84FF',
 };
+
+export const DARK_COLORS: ThemeColors = {
+  primary: '#0A84FF',
+  primaryMuted: '#1C3A5E',
+  accent: '#32D74B',
+  background: '#000000',
+  surface: '#1C1C1E',
+  surfaceElevated: '#2C2C2E',
+  text: '#FFFFFF',
+  textSecondary: '#8E8E93',
+  textTertiary: '#636366',
+  success: '#32D74B',
+  warning: '#FF9F0A',
+  error: '#FF453A',
+  border: '#38383A',
+  divider: '#38383A',
+  streak: '#FF9F0A',
+  water: '#0A84FF',
+};
+
+// Default export for backward compatibility
+export const COLORS = LIGHT_COLORS;
 
 export const ACTIVITY_LEVELS: { value: ActivityLevel; label: string; description: string }[] = [
   { value: 'sedentary', label: 'Sedentary', description: 'Little to no exercise, desk job' },
