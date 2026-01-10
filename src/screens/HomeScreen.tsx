@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWater } from '../context/WaterContext';
@@ -23,7 +24,7 @@ import { mediumTap, successFeedback, warningFeedback } from '../utils/haptics';
 import { loadSounds, playWaterSound } from '../utils/sounds';
 
 export function HomeScreen() {
-  const { state, addWater, removeEntry, setUnitSystem } = useWater();
+  const { state, addWater, removeEntry, clearToday, setUnitSystem } = useWater();
   const { colors } = useTheme();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
@@ -55,6 +56,8 @@ export function HomeScreen() {
     modalCancelText: { color: colors.textSecondary },
     modalAddButton: { backgroundColor: colors.primary },
     modalAddButtonDisabled: { backgroundColor: colors.border },
+    logHeader: { color: colors.textSecondary },
+    clearAllText: { color: colors.error },
   }), [colors]);
 
   // Load sounds on mount
@@ -123,6 +126,24 @@ export function HomeScreen() {
     setUnitSystem(settings.unitSystem === 'metric' ? 'imperial' : 'metric');
   };
 
+  const handleClearAll = () => {
+    Alert.alert(
+      'Clear All Entries',
+      'Are you sure you want to clear all of today\'s water entries?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: () => {
+            warningFeedback();
+            clearToday();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <WaterBackground progress={progress} />
@@ -171,6 +192,14 @@ export function HomeScreen() {
 
         {/* Today's Log */}
         <View style={styles.logContainer}>
+          {todayLog.entries.length > 0 && (
+            <View style={styles.logHeaderRow}>
+              <Text style={[styles.logHeaderText, dynamicStyles.logHeader]}>Today's Entries</Text>
+              <TouchableOpacity onPress={handleClearAll}>
+                <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={[styles.logCard, dynamicStyles.logCard]}>
             <IntakeLog
               entries={todayLog.entries}
@@ -301,6 +330,23 @@ const styles = StyleSheet.create({
   },
   logContainer: {
     flex: 1,
+  },
+  logHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  logHeaderText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  clearAllText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   logCard: {
     borderRadius: 20,

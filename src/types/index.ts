@@ -68,5 +68,6 @@ export interface WaterContextType {
   setThemeMode: (mode: ThemeMode) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
+  clearToday: () => void;
   loadMockData: (todayEntries: number, historyDays: number) => Promise<void>;
 }

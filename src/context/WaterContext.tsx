@@ -37,6 +37,7 @@ type Action =
   | { type: 'SET_THEME_MODE'; payload: { mode: ThemeMode } }
   | { type: 'COMPLETE_ONBOARDING' }
   | { type: 'RESET_ONBOARDING' }
+  | { type: 'CLEAR_TODAY' }
   | { type: 'LOAD_MOCK_DATA'; payload: { todayLog: DailyLog; history: HistoryEntry[] } };
 
 const initialState: AppState = {
@@ -190,6 +191,16 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
 
+    case 'CLEAR_TODAY':
+      return {
+        ...state,
+        todayLog: {
+          date: getTodayDateString(),
+          entries: [],
+          totalMl: 0,
+        },
+      };
+
     case 'LOAD_MOCK_DATA':
       return {
         ...state,
@@ -281,6 +292,9 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     },
     resetOnboarding: () => {
       dispatch({ type: 'RESET_ONBOARDING' });
+    },
+    clearToday: () => {
+      dispatch({ type: 'CLEAR_TODAY' });
     },
     loadMockData: async (todayEntries: number, historyDays: number) => {
       const todayLog = generateMockTodayLog(todayEntries);
