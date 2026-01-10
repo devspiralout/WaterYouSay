@@ -94,7 +94,7 @@ export function UndoToast({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 30,
     left: 24,
     right: 24,
     zIndex: 1000,

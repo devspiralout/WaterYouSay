@@ -1,22 +1,17 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 
-let waterSound: Audio.Sound | null = null;
+let waterSound: AudioPlayer | null = null;
 
-// Water drop sound effect URL (public domain)
-const WATER_DROP_URL = 'https://assets.mixkit.co/active_storage/sfx/2617/2617-preview.mp3';
+// Gentle water bubble sound effect (public domain from Mixkit)
+const WATER_DROP_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
 export async function loadSounds(): Promise<void> {
   try {
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: false,
-      staysActiveInBackground: false,
+    const player = createAudioPlayer(WATER_DROP_URL, {
+      volume: 0.5,
     });
-
-    const { sound } = await Audio.Sound.createAsync(
-      { uri: WATER_DROP_URL },
-      { shouldPlay: false, volume: 0.5 }
-    );
-    waterSound = sound;
+    player.loop = false;
+    waterSound = player;
   } catch (error) {
     console.log('Error loading sounds:', error);
   }
@@ -25,8 +20,8 @@ export async function loadSounds(): Promise<void> {
 export async function playWaterSound(): Promise<void> {
   try {
     if (waterSound) {
-      await waterSound.setPositionAsync(0);
-      await waterSound.playAsync();
+      await waterSound.seekTo(0);
+      waterSound.play();
     }
   } catch (error) {
     console.log('Error playing water sound:', error);
@@ -36,7 +31,7 @@ export async function playWaterSound(): Promise<void> {
 export async function unloadSounds(): Promise<void> {
   try {
     if (waterSound) {
-      await waterSound.unloadAsync();
+      waterSound.remove();
       waterSound = null;
     }
   } catch (error) {

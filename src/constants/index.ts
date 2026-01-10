@@ -14,6 +14,7 @@ export interface ThemeColors {
   textTertiary: string;
   success: string;
   warning: string;
+  warningMuted: string;
   error: string;
   border: string;
   divider: string;
@@ -33,6 +34,7 @@ export const LIGHT_COLORS: ThemeColors = {
   textTertiary: '#AEAEB2',
   success: '#32D74B',
   warning: '#FF9F0A',
+  warningMuted: '#FFF3E0',
   error: '#FF453A',
   border: '#F2F2F7',
   divider: '#E5E5EA',
@@ -52,6 +54,7 @@ export const DARK_COLORS: ThemeColors = {
   textTertiary: '#636366',
   success: '#32D74B',
   warning: '#FF9F0A',
+  warningMuted: '#3D2F00',
   error: '#FF453A',
   border: '#38383A',
   divider: '#38383A',
