@@ -22,15 +22,18 @@ import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, warningFeedback } from '../utils/haptics';
 import { loadSounds, playWaterSound, playRemoveSound } from '../utils/sounds';
 import { WeekCalendar } from '../components/WeekCalendar';
+import { CalendarIcon } from '../components/CalendarIcon';
+import { MonthCalendar } from '../components/MonthCalendar';
 
 export function HomeScreen() {
-  const { state, addWater, removeEntry, clearToday, setUnitSystem } = useWater();
+  const { state, addWater, removeEntry, clearToday } = useWater();
   const { colors } = useTheme();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [undoToastVisible, setUndoToastVisible] = useState(false);
   const [lastDeletedAmount, setLastDeletedAmount] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
 
   const { todayLog, settings, history } = state;
   const isViewingToday = isToday(selectedDate);
@@ -59,7 +62,6 @@ export function HomeScreen() {
   const dynamicStyles = useMemo(() => ({
     container: { backgroundColor: colors.background },
     greeting: { color: colors.text },
-    unitToggleText: { color: colors.textSecondary },
     logCard: { 
       backgroundColor: colors.surface + 'BF', // 75% opacity
       borderColor: colors.surface + '80', // 50% opacity
@@ -132,10 +134,6 @@ export function HomeScreen() {
     setLastDeletedAmount(null);
   };
 
-  const toggleUnits = () => {
-    setUnitSystem(settings.unitSystem === 'metric' ? 'imperial' : 'metric');
-  };
-
   const handleClearAll = () => {
     Alert.alert(
       'Clear All Entries',
@@ -161,10 +159,8 @@ export function HomeScreen() {
       {/* Sticky Header */}
       <View style={styles.header}>
         <Text style={[styles.greeting, dynamicStyles.greeting]}>{headerTitle}</Text>
-        <TouchableOpacity onPress={toggleUnits} style={styles.unitToggle}>
-          <Text style={[styles.unitToggleText, dynamicStyles.unitToggleText]}>
-            {settings.unitSystem === 'metric' ? 'ML' : 'OZ'}
-          </Text>
+        <TouchableOpacity onPress={() => setCalendarModalVisible(true)} style={styles.calendarButton}>
+          <CalendarIcon size={24} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -296,6 +292,25 @@ export function HomeScreen() {
         </View>
       </Modal>
 
+      {/* Calendar Modal */}
+      <Modal
+        visible={calendarModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCalendarModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <MonthCalendar
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            todayLog={todayLog}
+            history={history}
+            dailyGoalMl={settings.dailyGoalMl}
+            onClose={() => setCalendarModalVisible(false)}
+          />
+        </View>
+      </Modal>
+
       {/* Undo Toast */}
       <UndoToast
         visible={undoToastVisible}
@@ -330,14 +345,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.5,
   },
-  unitToggle: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  unitToggleText: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+  calendarButton: {
+    padding: 8,
   },
   progressContainer: {
     alignItems: 'center',
