@@ -1,3 +1,12 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
+
+// Navigation types
+export type RootTabParamList = {
+  Today: undefined;
+  Awards: undefined;
+  Settings: undefined;
+};
+
 export type Sex = 'male' | 'female';
 
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';

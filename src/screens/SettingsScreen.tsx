@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { RootTabParamList } from '../types';
 import { BarChart } from 'react-native-gifted-charts';
 import { useWater } from '../context/WaterContext';
 import { WaterDropIcon } from '../components/WaterDropIcon';
@@ -45,7 +47,7 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 export function SettingsScreen() {
   const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, resetOnboarding, loadMockData } = useWater();
   const { colors } = useTheme();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const { settings, profile, history, todayLog } = state;
   const [showDebug, setShowDebug] = useState(false);
 
@@ -255,8 +257,12 @@ export function SettingsScreen() {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            await clearAllData();
-            resetOnboarding();
+            try {
+              await clearAllData();
+              resetOnboarding();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reset data. Please try again.');
+            }
           },
         },
       ]

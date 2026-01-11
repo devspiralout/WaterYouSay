@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { RootTabParamList } from '../types';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { ProgressRing } from '../components/ProgressRing';
@@ -30,7 +32,7 @@ import { MonthCalendar } from '../components/MonthCalendar';
 export function HomeScreen() {
   const { state, addWater, clearToday } = useWater();
   const { colors } = useTheme();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
@@ -89,7 +91,7 @@ export function HomeScreen() {
 
   const handleCustomAdd = () => {
     const amount = parseInt(customAmount, 10);
-    if (amount > 0) {
+    if (!isNaN(amount) && amount > 0) {
       mediumTap();
       if (settings.soundEnabled) {
         playWaterSound();

@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { RootTabParamList } from '../types';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { WaterDropIcon } from '../components/WaterDropIcon';
@@ -13,7 +15,7 @@ import { Achievement, AchievementId } from '../types';
 export function AchievementsScreen() {
   const { state } = useWater();
   const { colors } = useTheme();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const { history, settings, todayLog, unlockedAchievements } = state;
 
   // Dynamic styles based on theme
