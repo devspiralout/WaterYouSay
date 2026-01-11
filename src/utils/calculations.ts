@@ -153,3 +153,50 @@ export function calculateStreak(
 
   return streak;
 }
+
+/**
+ * Get array of dates for the week containing the given date (Mon-Sun)
+ */
+export function getWeekDates(date: Date = new Date()): Date[] {
+  const dates: Date[] = [];
+  const current = new Date(date);
+
+  // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+  const dayOfWeek = current.getDay();
+
+  // Calculate Monday (if Sunday, go back 6 days, otherwise go back dayOfWeek - 1 days)
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(current);
+  monday.setDate(current.getDate() + mondayOffset);
+
+  // Generate Mon-Sun
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    dates.push(day);
+  }
+
+  return dates;
+}
+
+/**
+ * Check if a date string (YYYY-MM-DD) is today
+ */
+export function isToday(dateStr: string): boolean {
+  return dateStr === getTodayDateString();
+}
+
+/**
+ * Check if a date string (YYYY-MM-DD) is in the future
+ */
+export function isFutureDate(dateStr: string): boolean {
+  const today = getTodayDateString();
+  return dateStr > today;
+}
+
+/**
+ * Format a date as a date string (YYYY-MM-DD)
+ */
+export function formatDateString(date: Date): string {
+  return date.toISOString().split('T')[0];
+}

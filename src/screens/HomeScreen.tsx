@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,26 +16,44 @@ import { ProgressRing } from '../components/ProgressRing';
 import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { IntakeLog } from '../components/IntakeLog';
 import { WaterBackground } from '../components/WaterBackground';
-import { CelebrationSplash } from '../components/CelebrationSplash';
 import { UndoToast } from '../components/UndoToast';
-import { calculateProgress } from '../utils/calculations';
+import { calculateProgress, getTodayDateString, isToday, isFutureDate } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
-import { mediumTap, successFeedback, warningFeedback } from '../utils/haptics';
+import { mediumTap, warningFeedback } from '../utils/haptics';
 import { loadSounds, playWaterSound, playRemoveSound } from '../utils/sounds';
+import { WeekCalendar } from '../components/WeekCalendar';
 
 export function HomeScreen() {
   const { state, addWater, removeEntry, clearToday, setUnitSystem } = useWater();
   const { colors } = useTheme();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
-  const [showCelebration, setShowCelebration] = useState(false);
-  const hasShownCelebration = useRef(false);
   const [undoToastVisible, setUndoToastVisible] = useState(false);
   const [lastDeletedAmount, setLastDeletedAmount] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState(getTodayDateString());
 
-  const { todayLog, settings } = state;
-  const progress = calculateProgress(todayLog.totalMl, settings.dailyGoalMl);
+  const { todayLog, settings, history } = state;
+  const isViewingToday = isToday(selectedDate);
+  const isViewingFuture = isFutureDate(selectedDate);
+
+  // Get data for the selected date
+  const selectedDayData = useMemo(() => {
+    if (isViewingToday) {
+      return { totalMl: todayLog.totalMl, entries: todayLog.entries };
+    }
+    const historyEntry = history.find(h => h.date === selectedDate);
+    return { totalMl: historyEntry?.totalMl || 0, entries: [] };
+  }, [selectedDate, isViewingToday, todayLog, history]);
+
+  const progress = calculateProgress(selectedDayData.totalMl, settings.dailyGoalMl);
   const quickAddAmounts = getQuickAddAmounts(settings.unitSystem, settings.quickAddAmounts);
+
+  // Format selected date for header
+  const headerTitle = useMemo(() => {
+    if (isViewingToday) return 'Today';
+    const date = new Date(selectedDate + 'T12:00:00');
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }, [selectedDate, isViewingToday]);
 
   // Dynamic styles based on theme
   const dynamicStyles = useMemo(() => ({
@@ -62,18 +80,6 @@ export function HomeScreen() {
   useEffect(() => {
     loadSounds();
   }, []);
-
-  // Show celebration when goal is reached for the first time today
-  useEffect(() => {
-    if (progress >= 100 && !hasShownCelebration.current) {
-      hasShownCelebration.current = true;
-      successFeedback();
-      setShowCelebration(true);
-    } else if (progress < 100) {
-      // Reset if progress drops below 100 (e.g., removed entries)
-      hasShownCelebration.current = false;
-    }
-  }, [progress]);
 
   const handleQuickAdd = (amountMl: number) => {
     mediumTap();
@@ -154,13 +160,22 @@ export function HomeScreen() {
 
       {/* Sticky Header */}
       <View style={styles.header}>
-        <Text style={[styles.greeting, dynamicStyles.greeting]}>Today</Text>
+        <Text style={[styles.greeting, dynamicStyles.greeting]}>{headerTitle}</Text>
         <TouchableOpacity onPress={toggleUnits} style={styles.unitToggle}>
           <Text style={[styles.unitToggleText, dynamicStyles.unitToggleText]}>
             {settings.unitSystem === 'metric' ? 'ML' : 'OZ'}
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Week Calendar */}
+      <WeekCalendar
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+        todayLog={todayLog}
+        history={history}
+        dailyGoalMl={settings.dailyGoalMl}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -170,43 +185,65 @@ export function HomeScreen() {
         <View style={styles.progressContainer}>
           <ProgressRing
             progress={progress}
-            currentAmount={mlToDisplay(todayLog.totalMl, settings.unitSystem)}
+            currentAmount={mlToDisplay(selectedDayData.totalMl, settings.unitSystem)}
             goalAmount={mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
           />
         </View>
 
-        {/* Quick Add Buttons */}
-        <View style={styles.quickAddContainer}>
-          <View style={styles.buttonRow}>
-            {quickAddAmounts.map(({ ml, display }) => (
-              <WaterButton
-                key={ml}
-                amount={display}
-                onPress={() => handleQuickAdd(ml)}
-              />
-            ))}
-            <CustomAmountButton onPress={() => setCustomModalVisible(true)} />
-          </View>
-        </View>
-
-        {/* Today's Log */}
-        <View style={styles.logContainer}>
-          {todayLog.entries.length > 0 && (
-            <View style={styles.logHeaderRow}>
-              <Text style={[styles.logHeaderText, dynamicStyles.logHeader]}>Today's Entries</Text>
-              <TouchableOpacity onPress={handleClearAll}>
-                <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
-              </TouchableOpacity>
+        {/* Quick Add Buttons - only show for today */}
+        {isViewingToday && (
+          <View style={styles.quickAddContainer}>
+            <View style={styles.buttonRow}>
+              {quickAddAmounts.map(({ ml, display }) => (
+                <WaterButton
+                  key={ml}
+                  amount={display}
+                  onPress={() => handleQuickAdd(ml)}
+                />
+              ))}
+              <CustomAmountButton onPress={() => setCustomModalVisible(true)} />
             </View>
-          )}
-          <View style={[styles.logCard, dynamicStyles.logCard]}>
-            <IntakeLog
-              entries={todayLog.entries}
-              unitSystem={settings.unitSystem}
-              onRemoveEntry={handleRemoveEntry}
-            />
           </View>
-        </View>
+        )}
+
+        {/* Past day message */}
+        {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
+          <View style={styles.pastDayMessage}>
+            <Text style={[styles.pastDayText, { color: colors.textSecondary }]}>
+              You drank {mlToDisplay(selectedDayData.totalMl, settings.unitSystem)} this day
+            </Text>
+          </View>
+        )}
+
+        {/* Future day message */}
+        {isViewingFuture && (
+          <View style={styles.pastDayMessage}>
+            <Text style={[styles.pastDayText, { color: colors.textTertiary }]}>
+              Future date
+            </Text>
+          </View>
+        )}
+
+        {/* Today's Log - only show for today */}
+        {isViewingToday && (
+          <View style={styles.logContainer}>
+            {todayLog.entries.length > 0 && (
+              <View style={styles.logHeaderRow}>
+                <Text style={[styles.logHeaderText, dynamicStyles.logHeader]}>Today's Entries</Text>
+                <TouchableOpacity onPress={handleClearAll}>
+                  <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={[styles.logCard, dynamicStyles.logCard]}>
+              <IntakeLog
+                entries={todayLog.entries}
+                unitSystem={settings.unitSystem}
+                onRemoveEntry={handleRemoveEntry}
+              />
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Custom Amount Modal */}
@@ -266,12 +303,6 @@ export function HomeScreen() {
         onUndo={handleUndo}
         onDismiss={handleDismissUndo}
       />
-
-      {/* Celebration Animation - rendered last to overlay everything */}
-      <CelebrationSplash
-        visible={showCelebration}
-        onDismiss={() => setShowCelebration(false)}
-      />
     </SafeAreaView>
   );
 }
@@ -314,6 +345,15 @@ const styles = StyleSheet.create({
   },
   quickAddContainer: {
     marginBottom: 40,
+  },
+  pastDayMessage: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    marginBottom: 20,
+  },
+  pastDayText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
   buttonRow: {
     flexDirection: 'row',

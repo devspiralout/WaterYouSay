@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Dimensions, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '../context/ThemeContext';
@@ -19,32 +19,9 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
   const waveAnim1 = useRef(new Animated.Value(0)).current;
   const waveAnim2 = useRef(new Animated.Value(0)).current;
   const riseAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-  const [showGoalColor, setShowGoalColor] = useState(false);
-  const goalTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clamp progress between 0 and 100
   const clampedProgress = Math.min(Math.max(progress, 0), 100);
-
-  // Handle goal reached color - show green briefly then fade back to blue
-  useEffect(() => {
-    if (clampedProgress >= 100 && !showGoalColor) {
-      setShowGoalColor(true);
-      goalTimerRef.current = setTimeout(() => {
-        setShowGoalColor(false);
-      }, 2500);
-    } else if (clampedProgress < 100) {
-      setShowGoalColor(false);
-      if (goalTimerRef.current) {
-        clearTimeout(goalTimerRef.current);
-      }
-    }
-
-    return () => {
-      if (goalTimerRef.current) {
-        clearTimeout(goalTimerRef.current);
-      }
-    };
-  }, [clampedProgress]);
 
   // Animate water level smoothly when progress changes
   useEffect(() => {
@@ -130,7 +107,7 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
         <Svg width={SVG_WIDTH} height={SVG_HEIGHT}>
           <Path
             d={createWavePath(0)}
-            fill={showGoalColor ? colors.success + '25' : colors.primary + '15'}
+            fill={colors.primary + '15'}
           />
         </Svg>
       </Animated.View>
@@ -151,7 +128,7 @@ export function WaterBackground({ progress }: WaterBackgroundProps) {
         <Svg width={SVG_WIDTH} height={SVG_HEIGHT}>
           <Path
             d={createWavePath(Math.PI / 3)}
-            fill={showGoalColor ? colors.success + '18' : colors.primary + '10'}
+            fill={colors.primary + '10'}
           />
         </Svg>
       </Animated.View>
