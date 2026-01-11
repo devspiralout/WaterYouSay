@@ -1,23 +1,14 @@
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
 
-// Check if running in Expo Go (notifications have limited support there)
-export function isExpoGo(): boolean {
-  return Constants.appOwnership === 'expo';
-}
-
-// Only set up notification handler if not in Expo Go
-if (!isExpoGo()) {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-}
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export interface ReminderSettings {
   enabled: boolean;
@@ -58,9 +49,6 @@ export async function scheduleWaterReminders(settings: ReminderSettings): Promis
   await cancelAllReminders();
 
   if (!settings.enabled) return;
-
-  // Skip scheduling in Expo Go - notifications don't work there
-  if (isExpoGo()) return;
 
   const hasPermission = await requestNotificationPermissions();
   if (!hasPermission) return;

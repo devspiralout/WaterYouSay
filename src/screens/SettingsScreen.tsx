@@ -19,7 +19,7 @@ import { mlToDisplay, formatWeight } from '../utils/units';
 import { clearAllData } from '../utils/storage';
 import { getCalculationBreakdown } from '../utils/calculations';
 import { MOCK_PRESETS } from '../utils/mockData';
-import { scheduleWaterReminders, requestNotificationPermissions, isExpoGo } from '../utils/notifications';
+import { scheduleWaterReminders, requestNotificationPermissions } from '../utils/notifications';
 
 const INTERVAL_OPTIONS = [
   { value: 1, label: 'Every hour' },
@@ -97,8 +97,6 @@ export function SettingsScreen() {
     quickAddHint: { color: colors.textSecondary },
     quickAddInput: { backgroundColor: colors.background, color: colors.text },
     quickAddUnit: { color: colors.textSecondary },
-    expoGoWarning: { backgroundColor: colors.warningMuted },
-    expoGoWarningText: { color: colors.warning },
   }), [colors]);
 
   // Schedule reminders when settings change
@@ -273,16 +271,9 @@ export function SettingsScreen() {
         {/* Reminders */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>REMINDERS</Text>
-          {isExpoGo() && (
-            <View style={[styles.expoGoWarning, dynamicStyles.expoGoWarning]}>
-              <Text style={[styles.expoGoWarningText, dynamicStyles.expoGoWarningText]}>
-                Notifications require a development build. They won't work in Expo Go.
-              </Text>
-            </View>
-          )}
-          <View style={[styles.reminderCard, dynamicStyles.reminderCard, isExpoGo() && styles.reminderCardDisabled]}>
+          <View style={[styles.reminderCard, dynamicStyles.reminderCard]}>
             <View style={styles.reminderRow}>
-              <View style={{ opacity: isExpoGo() ? 0.5 : 1 }}>
+              <View>
                 <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Water Reminders</Text>
                 <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>
                   {settings.reminders.enabled
@@ -295,7 +286,6 @@ export function SettingsScreen() {
                 onValueChange={handleToggleReminders}
                 trackColor={{ false: colors.border, true: colors.primaryMuted }}
                 thumbColor={settings.reminders.enabled ? colors.primary : colors.textTertiary}
-                disabled={isExpoGo()}
               />
             </View>
             {settings.reminders.enabled && (
@@ -690,21 +680,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  expoGoWarning: {
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-  expoGoWarningText: {
-    fontSize: 13,
-    textAlign: 'center',
-  },
   reminderCard: {
     borderRadius: 14,
     overflow: 'hidden',
-  },
-  reminderCardDisabled: {
-    opacity: 0.6,
   },
   reminderRow: {
     flexDirection: 'row',
