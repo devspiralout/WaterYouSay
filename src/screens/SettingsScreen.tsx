@@ -9,17 +9,21 @@ import {
   Alert,
   Modal,
   Switch,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BarChart } from 'react-native-gifted-charts';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { ACTIVITY_LEVELS } from '../constants';
 import { ThemeMode } from '../types';
 import { mlToDisplay, formatWeight } from '../utils/units';
 import { clearAllData } from '../utils/storage';
-import { getCalculationBreakdown } from '../utils/calculations';
+import { getCalculationBreakdown, getTodayDateString } from '../utils/calculations';
 import { MOCK_PRESETS } from '../utils/mockData';
 import { scheduleWaterReminders, requestNotificationPermissions } from '../utils/notifications';
+
+const screenWidth = Dimensions.get('window').width;
 
 const INTERVAL_OPTIONS = [
   { value: 1, label: 'Every hour' },
@@ -37,16 +41,91 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 export function SettingsScreen() {
   const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, resetOnboarding, loadMockData } = useWater();
   const { colors } = useTheme();
-  const { settings, profile } = state;
+  const { settings, profile, history, todayLog } = state;
   const [showDebug, setShowDebug] = useState(false);
 
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [newGoal, setNewGoal] = useState(settings.dailyGoalMl.toString());
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [quickAddModalVisible, setQuickAddModalVisible] = useState(false);
+  const [insightsModalVisible, setInsightsModalVisible] = useState(false);
   const [editingAmounts, setEditingAmounts] = useState<string[]>(
     settings.quickAddAmounts.map(a => a.toString())
   );
+
+  // Calculate chart data for last 7 days
+  const chartData = useMemo(() => {
+    const today = new Date();
+    const todayDateStr = getTodayDateString();
+    const data: { value: number; label: string; frontColor: string }[] = [];
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayLabel = dayLabels[date.getDay()];
+
+      let dayTotal = 0;
+      if (dateStr === todayDateStr) {
+        dayTotal = todayLog.totalMl;
+      } else {
+        const historyEntry = history.find(h => h.date === dateStr);
+        if (historyEntry) {
+          dayTotal = historyEntry.totalMl;
+        }
+      }
+
+      const metGoal = dayTotal >= settings.dailyGoalMl;
+      data.push({
+        value: dayTotal,
+        label: i === 0 ? 'Today' : dayLabel,
+        frontColor: metGoal ? colors.success : colors.primary,
+      });
+    }
+
+    return data;
+  }, [history, todayLog, settings.dailyGoalMl, colors]);
+
+  // Calculate max value for chart Y axis
+  const chartMaxValue = useMemo(() => {
+    const maxIntake = Math.max(...chartData.map(d => d.value), settings.dailyGoalMl);
+    return Math.ceil(maxIntake / 500) * 500;
+  }, [chartData, settings.dailyGoalMl]);
+
+  // Calculate stats for last 7 days
+  const last7DaysStats = useMemo(() => {
+    const today = new Date();
+    const todayDateStr = getTodayDateString();
+    let totalMl = 0;
+    let daysTracked = 0;
+    let bestDay = 0;
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      let dayTotal = 0;
+      if (dateStr === todayDateStr) {
+        dayTotal = todayLog.totalMl;
+      } else {
+        const historyEntry = history.find(h => h.date === dateStr);
+        if (historyEntry) {
+          dayTotal = historyEntry.totalMl;
+        }
+      }
+
+      if (dayTotal > 0) {
+        totalMl += dayTotal;
+        daysTracked++;
+        if (dayTotal > bestDay) bestDay = dayTotal;
+      }
+    }
+
+    const averageMl = daysTracked > 0 ? Math.round(totalMl / daysTracked) : 0;
+    return { totalMl, averageMl, daysTracked, bestDay };
+  }, [history, todayLog]);
 
   // Dynamic styles based on theme
   const dynamicStyles = useMemo(() => ({
@@ -195,6 +274,19 @@ export function SettingsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Insights */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={[styles.insightsButton, { backgroundColor: colors.primary }]}
+            onPress={() => setInsightsModalVisible(true)}
+          >
+            <Text style={styles.insightsButtonText}>View Insights</Text>
+            <Text style={[styles.insightsButtonSubtext, { color: 'rgba(255,255,255,0.8)' }]}>
+              Charts & Statistics
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Daily Goal */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>GOAL</Text>
@@ -600,6 +692,121 @@ export function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Insights Modal */}
+      <Modal
+        visible={insightsModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setInsightsModalVisible(false)}
+      >
+        <SafeAreaView style={[styles.insightsModal, { backgroundColor: colors.background }]} edges={['top']}>
+          <View style={styles.insightsHeader}>
+            <Text style={[styles.insightsTitle, { color: colors.text }]}>Insights</Text>
+            <TouchableOpacity
+              style={[styles.insightsCloseButton, { backgroundColor: colors.surface }]}
+              onPress={() => setInsightsModalVisible(false)}
+            >
+              <Text style={[styles.insightsCloseText, { color: colors.text }]}>Done</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.insightsContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Chart */}
+            <View style={[styles.insightsCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.insightsCardTitle, { color: colors.text }]}>Last 7 Days</Text>
+              <View style={styles.chartContainer}>
+                <BarChart
+                  data={chartData}
+                  width={screenWidth - 80}
+                  height={180}
+                  barWidth={28}
+                  spacing={18}
+                  barBorderRadius={6}
+                  noOfSections={4}
+                  maxValue={chartMaxValue}
+                  yAxisThickness={0}
+                  xAxisThickness={1}
+                  xAxisColor={colors.border}
+                  yAxisTextStyle={{ color: colors.textTertiary, fontSize: 10 }}
+                  xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 11 }}
+                  hideRules
+                  showReferenceLine1
+                  referenceLine1Position={settings.dailyGoalMl}
+                  referenceLine1Config={{
+                    color: colors.success,
+                    dashWidth: 4,
+                    dashGap: 4,
+                    thickness: 1.5,
+                  }}
+                  renderTooltip={(item: { value: number }) => (
+                    <View style={[styles.tooltip, { backgroundColor: colors.surfaceElevated }]}>
+                      <Text style={[styles.tooltipText, { color: colors.text }]}>
+                        {mlToDisplay(item.value, settings.unitSystem)}
+                      </Text>
+                    </View>
+                  )}
+                />
+              </View>
+              <View style={styles.chartLegend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Below Goal</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
+                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Goal Met</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendLine, { backgroundColor: colors.success }]} />
+                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Goal</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Stats */}
+            {last7DaysStats.daysTracked > 0 && (
+              <View style={[styles.insightsCard, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.insightsCardTitle, { color: colors.text }]}>Statistics</Text>
+                <View style={styles.statsGrid}>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: colors.primary }]}>
+                      {mlToDisplay(last7DaysStats.averageMl, settings.unitSystem)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Daily Avg</Text>
+                  </View>
+                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: colors.success }]}>
+                      {mlToDisplay(last7DaysStats.bestDay, settings.unitSystem)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Best Day</Text>
+                  </View>
+                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: colors.text }]}>
+                      {mlToDisplay(last7DaysStats.totalMl, settings.unitSystem)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {last7DaysStats.daysTracked === 0 && (
+              <View style={[styles.insightsCard, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No data yet</Text>
+                <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
+                  Start tracking your water intake to see insights
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -906,5 +1113,133 @@ const styles = StyleSheet.create({
   modalSaveText: {
     fontSize: 17,
     fontWeight: '600',
+  },
+  // Insights Button
+  insightsButton: {
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  insightsButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  insightsButtonSubtext: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+  // Insights Modal
+  insightsModal: {
+    flex: 1,
+  },
+  insightsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  insightsTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  insightsCloseButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  insightsCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  insightsContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  insightsCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  insightsCardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  chartContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendLine: {
+    width: 16,
+    height: 2,
+    borderRadius: 1,
+  },
+  legendText: {
+    fontSize: 11,
+  },
+  tooltip: {
+    padding: 6,
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tooltipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 15,
+    textAlign: 'center',
   },
 });

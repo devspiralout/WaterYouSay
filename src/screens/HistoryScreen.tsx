@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BarChart } from 'react-native-gifted-charts';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { mlToDisplay } from '../utils/units';
 import { calculateProgress, getTodayDateString } from '../utils/calculations';
+
+const screenWidth = Dimensions.get('window').width;
 
 interface PeriodStats {
   totalMl: number;
@@ -116,6 +119,46 @@ export function HistoryScreen() {
     return { totalMl, averageMl, daysTracked, bestDay };
   }, [history, todayLog]);
 
+  // Calculate chart data for last 7 days
+  const chartData = useMemo(() => {
+    const today = new Date();
+    const todayDateStr = getTodayDateString();
+    const data: { value: number; label: string; frontColor: string }[] = [];
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayLabel = dayLabels[date.getDay()];
+
+      let dayTotal = 0;
+      if (dateStr === todayDateStr) {
+        dayTotal = todayLog.totalMl;
+      } else {
+        const historyEntry = history.find(h => h.date === dateStr);
+        if (historyEntry) {
+          dayTotal = historyEntry.totalMl;
+        }
+      }
+
+      const metGoal = dayTotal >= settings.dailyGoalMl;
+      data.push({
+        value: dayTotal,
+        label: i === 0 ? 'Today' : dayLabel,
+        frontColor: metGoal ? colors.success : colors.primary,
+      });
+    }
+
+    return data;
+  }, [history, todayLog, settings.dailyGoalMl, colors]);
+
+  // Calculate max value for chart Y axis
+  const chartMaxValue = useMemo(() => {
+    const maxIntake = Math.max(...chartData.map(d => d.value), settings.dailyGoalMl);
+    return Math.ceil(maxIntake / 500) * 500; // Round up to nearest 500
+  }, [chartData, settings.dailyGoalMl]);
+
   const allLogs = [
     { ...todayLog, isToday: true },
     ...history.map(log => ({ ...log, isToday: false })),
@@ -144,10 +187,10 @@ export function HistoryScreen() {
     return (
       <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
         <View style={styles.header}>
-          <Text style={[styles.title, dynamicStyles.title]}>History</Text>
+          <Text style={[styles.title, dynamicStyles.title]}>Insights</Text>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, dynamicStyles.emptyText]}>No history yet</Text>
+          <Text style={[styles.emptyText, dynamicStyles.emptyText]}>No data yet</Text>
           <Text style={[styles.emptySubtext, dynamicStyles.emptySubtext]}>Start tracking your water intake</Text>
         </View>
       </SafeAreaView>
@@ -160,7 +203,7 @@ export function HistoryScreen() {
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.title, dynamicStyles.title]}>History</Text>
+        <Text style={[styles.title, dynamicStyles.title]}>Insights</Text>
       </View>
 
       {/* Sticky Stats Section */}
@@ -202,10 +245,63 @@ export function HistoryScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Chart - only show for Last 7 Days tab */}
+          {activeTab === 'last7' && (
+            <View style={[styles.chartCard, dynamicStyles.weeklyCard]}>
+              <Text style={[styles.chartTitle, dynamicStyles.weeklyTitle]}>Daily Intake</Text>
+              <View style={styles.chartContainer}>
+                <BarChart
+                  data={chartData}
+                  width={screenWidth - 96}
+                  height={150}
+                  barWidth={28}
+                  spacing={16}
+                  barBorderRadius={6}
+                  noOfSections={4}
+                  maxValue={chartMaxValue}
+                  yAxisThickness={0}
+                  xAxisThickness={1}
+                  xAxisColor={colors.border}
+                  yAxisTextStyle={{ color: colors.textTertiary, fontSize: 10 }}
+                  xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 11 }}
+                  hideRules
+                  showReferenceLine1
+                  referenceLine1Position={settings.dailyGoalMl}
+                  referenceLine1Config={{
+                    color: colors.success,
+                    dashWidth: 4,
+                    dashGap: 4,
+                    thickness: 1.5,
+                  }}
+                  renderTooltip={(item: { value: number }) => (
+                    <View style={[styles.tooltip, { backgroundColor: colors.surface }]}>
+                      <Text style={[styles.tooltipText, { color: colors.text }]}>
+                        {mlToDisplay(item.value, settings.unitSystem)}
+                      </Text>
+                    </View>
+                  )}
+                />
+              </View>
+              <View style={styles.chartLegend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.legendText, dynamicStyles.statLabel]}>Below Goal</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
+                  <Text style={[styles.legendText, dynamicStyles.statLabel]}>Goal Met</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendLine, { backgroundColor: colors.success }]} />
+                  <Text style={[styles.legendText, dynamicStyles.statLabel]}>Goal</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* Stats Card */}
           {hasStats && (
             <View style={[styles.statsCard, dynamicStyles.weeklyCard]}>
-
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, dynamicStyles.statHighlight]}>
@@ -232,7 +328,6 @@ export function HistoryScreen() {
                   <Text style={[styles.statLabel, dynamicStyles.statLabel]}>Total</Text>
                 </View>
               </View>
-
             </View>
           )}
         </View>
@@ -333,14 +428,60 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 12,
   },
+  chartCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  chartContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendLine: {
+    width: 16,
+    height: 2,
+    borderRadius: 1,
+  },
+  legendText: {
+    fontSize: 11,
+  },
+  tooltip: {
+    padding: 6,
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tooltipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   statsCard: {
     borderRadius: 16,
     padding: 20,
-  },
-  daysTrackedText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
   },
   statsGrid: {
     flexDirection: 'row',

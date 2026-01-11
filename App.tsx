@@ -8,7 +8,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { WaterProvider, useWater } from './src/context/WaterContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { HomeScreen } from './src/screens/HomeScreen';
-import { HistoryScreen } from './src/screens/HistoryScreen';
 import { AchievementsScreen } from './src/screens/AchievementsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
@@ -46,11 +45,6 @@ function MainTabs() {
       <Tab.Screen
         name="Today"
         component={HomeScreen}
-        options={{ tabBarIcon: () => null }}
-      />
-      <Tab.Screen
-        name="History"
-        component={HistoryScreen}
         options={{ tabBarIcon: () => null }}
       />
       <Tab.Screen
