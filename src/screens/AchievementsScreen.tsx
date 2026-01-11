@@ -1,8 +1,11 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
+import { WaterDropIcon } from '../components/WaterDropIcon';
+import { GearIcon } from '../components/GearIcon';
 import { ACHIEVEMENTS } from '../constants';
 import { calculateStreak, getTodayDateString } from '../utils/calculations';
 import { Achievement, AchievementId } from '../types';
@@ -10,6 +13,7 @@ import { Achievement, AchievementId } from '../types';
 export function AchievementsScreen() {
   const { state } = useWater();
   const { colors } = useTheme();
+  const navigation = useNavigation<any>();
   const { history, settings, todayLog, unlockedAchievements } = state;
 
   // Dynamic styles based on theme
@@ -146,10 +150,20 @@ export function AchievementsScreen() {
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.title, dynamicStyles.title]}>Achievements</Text>
-        <Text style={[styles.progressText, dynamicStyles.progressText]}>
-          {unlockedCount}/{totalCount} unlocked
-        </Text>
+        <View>
+          <Text style={[styles.title, dynamicStyles.title]}>Achievements</Text>
+          <Text style={[styles.progressText, dynamicStyles.progressText]}>
+            {unlockedCount}/{totalCount} unlocked
+          </Text>
+        </View>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => navigation.navigate('Today')} style={styles.iconButton}>
+            <WaterDropIcon size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
+            <GearIcon size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -198,10 +212,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 16,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconButton: {
+    padding: 8,
   },
   title: {
     fontSize: 34,
@@ -211,6 +233,7 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 15,
     fontWeight: '500',
+    marginTop: 4,
   },
   scrollContent: {
     paddingHorizontal: 24,

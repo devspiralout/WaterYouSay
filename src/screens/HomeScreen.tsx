@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { ProgressRing } from '../components/ProgressRing';
@@ -21,11 +22,15 @@ import { mediumTap, warningFeedback } from '../utils/haptics';
 import { loadSounds, playWaterSound } from '../utils/sounds';
 import { WeekCalendar } from '../components/WeekCalendar';
 import { CalendarIcon } from '../components/CalendarIcon';
+import { TrophyIcon } from '../components/TrophyIcon';
+import { WaterDropIcon } from '../components/WaterDropIcon';
+import { GearIcon } from '../components/GearIcon';
 import { MonthCalendar } from '../components/MonthCalendar';
 
 export function HomeScreen() {
   const { state, addWater, clearToday } = useWater();
   const { colors } = useTheme();
+  const navigation = useNavigation<any>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
@@ -120,9 +125,20 @@ export function HomeScreen() {
       {/* Sticky Header */}
       <View style={styles.header}>
         <Text style={[styles.greeting, dynamicStyles.greeting]}>{headerTitle}</Text>
-        <TouchableOpacity onPress={() => setCalendarModalVisible(true)} style={styles.calendarButton}>
-          <CalendarIcon size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => setSelectedDate(getTodayDateString())} style={styles.iconButton}>
+            <WaterDropIcon size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Awards')} style={styles.iconButton}>
+            <TrophyIcon size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setCalendarModalVisible(true)} style={styles.iconButton}>
+            <CalendarIcon size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
+            <GearIcon size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Week Calendar */}
@@ -291,7 +307,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.5,
   },
-  calendarButton: {
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconButton: {
     padding: 8,
   },
   progressContainer: {

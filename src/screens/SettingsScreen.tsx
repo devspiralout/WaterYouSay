@@ -12,8 +12,12 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { BarChart } from 'react-native-gifted-charts';
 import { useWater } from '../context/WaterContext';
+import { WaterDropIcon } from '../components/WaterDropIcon';
+import { TrophyIcon } from '../components/TrophyIcon';
+import { CalendarIcon } from '../components/CalendarIcon';
 import { useTheme } from '../context/ThemeContext';
 import { ACTIVITY_LEVELS } from '../constants';
 import { ThemeMode } from '../types';
@@ -41,6 +45,7 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 export function SettingsScreen() {
   const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, resetOnboarding, loadMockData } = useWater();
   const { colors } = useTheme();
+  const navigation = useNavigation<any>();
   const { settings, profile, history, todayLog } = state;
   const [showDebug, setShowDebug] = useState(false);
 
@@ -268,6 +273,14 @@ export function SettingsScreen() {
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <View style={styles.header}>
         <Text style={[styles.title, dynamicStyles.title]}>Settings</Text>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => navigation.navigate('Today')} style={styles.iconButton}>
+            <WaterDropIcon size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Awards')} style={styles.iconButton}>
+            <TrophyIcon size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -816,9 +829,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 24,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconButton: {
+    padding: 8,
   },
   title: {
     fontSize: 34,

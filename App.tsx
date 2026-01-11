@@ -24,39 +24,12 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: true,
-        tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-        },
-        tabBarItemStyle: {
-          paddingVertical: 8,
-          bottom: 10,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
+        tabBarStyle: { display: 'none' }, // Hide tab bar - navigation via header icons
       }}
     >
-      <Tab.Screen
-        name="Today"
-        component={HomeScreen}
-        options={{ tabBarIcon: () => null }}
-      />
-      <Tab.Screen
-        name="Awards"
-        component={AchievementsScreen}
-        options={{ tabBarIcon: () => null }}
-      />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ tabBarIcon: () => null }}
-      />
+      <Tab.Screen name="Today" component={HomeScreen} />
+      <Tab.Screen name="Awards" component={AchievementsScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }
