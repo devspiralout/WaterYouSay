@@ -113,6 +113,9 @@ export function HomeScreen() {
   const handleUndo = () => {
     if (lastDeletedAmount) {
       mediumTap();
+      if (settings.soundEnabled) {
+        playWaterSound();
+      }
       addWater(lastDeletedAmount);
       setLastDeletedAmount(null);
     }

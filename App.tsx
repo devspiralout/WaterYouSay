@@ -35,6 +35,7 @@ function MainTabs() {
         },
         tabBarItemStyle: {
           paddingVertical: 8,
+          bottom: 10,
         },
         tabBarLabelStyle: {
           fontSize: 12,
