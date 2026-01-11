@@ -14,24 +14,20 @@ import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { ProgressRing } from '../components/ProgressRing';
 import { WaterButton, CustomAmountButton } from '../components/WaterButton';
-import { IntakeLog } from '../components/IntakeLog';
 import { WaterBackground } from '../components/WaterBackground';
-import { UndoToast } from '../components/UndoToast';
 import { calculateProgress, getTodayDateString, isToday, isFutureDate } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, warningFeedback } from '../utils/haptics';
-import { loadSounds, playWaterSound, playRemoveSound } from '../utils/sounds';
+import { loadSounds, playWaterSound } from '../utils/sounds';
 import { WeekCalendar } from '../components/WeekCalendar';
 import { CalendarIcon } from '../components/CalendarIcon';
 import { MonthCalendar } from '../components/MonthCalendar';
 
 export function HomeScreen() {
-  const { state, addWater, removeEntry, clearToday } = useWater();
+  const { state, addWater, clearToday } = useWater();
   const { colors } = useTheme();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
-  const [undoToastVisible, setUndoToastVisible] = useState(false);
-  const [lastDeletedAmount, setLastDeletedAmount] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
 
@@ -62,10 +58,6 @@ export function HomeScreen() {
   const dynamicStyles = useMemo(() => ({
     container: { backgroundColor: colors.background },
     greeting: { color: colors.text },
-    logCard: { 
-      backgroundColor: colors.surface + 'BF', // 75% opacity
-      borderColor: colors.surface + '80', // 50% opacity
-    },
     modalContent: { backgroundColor: colors.surface },
     modalTitle: { color: colors.text },
     customInput: { backgroundColor: colors.background, color: colors.text },
@@ -74,8 +66,7 @@ export function HomeScreen() {
     modalCancelText: { color: colors.textSecondary },
     modalAddButton: { backgroundColor: colors.primary },
     modalAddButtonDisabled: { backgroundColor: colors.border },
-    logHeader: { color: colors.textSecondary },
-    clearAllText: { color: colors.error },
+    clearAllText: { color: colors.textSecondary },
   }), [colors]);
 
   // Load sounds on mount
@@ -102,36 +93,6 @@ export function HomeScreen() {
       setCustomAmount('');
       setCustomModalVisible(false);
     }
-  };
-
-  const handleRemoveEntry = (entryId: string) => {
-    // Find the entry to get its amount before removing
-    const entry = todayLog.entries.find(e => e.id === entryId);
-    if (entry) {
-      setLastDeletedAmount(entry.amountMl);
-      warningFeedback();
-      if (settings.soundEnabled) {
-        playRemoveSound();
-      }
-      removeEntry(entryId);
-      setUndoToastVisible(true);
-    }
-  };
-
-  const handleUndo = () => {
-    if (lastDeletedAmount) {
-      mediumTap();
-      if (settings.soundEnabled) {
-        playWaterSound();
-      }
-      addWater(lastDeletedAmount);
-      setLastDeletedAmount(null);
-    }
-  };
-
-  const handleDismissUndo = () => {
-    setUndoToastVisible(false);
-    setLastDeletedAmount(null);
   };
 
   const handleClearAll = () => {
@@ -183,7 +144,15 @@ export function HomeScreen() {
             progress={progress}
             currentAmount={mlToDisplay(selectedDayData.totalMl, settings.unitSystem)}
             goalAmount={mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
+            entries={isViewingToday ? todayLog.entries : []}
+            goalMl={settings.dailyGoalMl}
+            unitSystem={settings.unitSystem}
           />
+          {isViewingToday && todayLog.entries.length > 0 && (
+            <TouchableOpacity onPress={handleClearAll} style={styles.clearAllButton}>
+              <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Quick Add Buttons - only show for today */}
@@ -220,26 +189,6 @@ export function HomeScreen() {
           </View>
         )}
 
-        {/* Today's Log - only show for today */}
-        {isViewingToday && (
-          <View style={styles.logContainer}>
-            {todayLog.entries.length > 0 && (
-              <View style={styles.logHeaderRow}>
-                <Text style={[styles.logHeaderText, dynamicStyles.logHeader]}>Today's Entries</Text>
-                <TouchableOpacity onPress={handleClearAll}>
-                  <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            <View style={[styles.logCard, dynamicStyles.logCard]}>
-              <IntakeLog
-                entries={todayLog.entries}
-                unitSystem={settings.unitSystem}
-                onRemoveEntry={handleRemoveEntry}
-              />
-            </View>
-          </View>
-        )}
       </ScrollView>
 
       {/* Custom Amount Modal */}
@@ -311,13 +260,6 @@ export function HomeScreen() {
         </View>
       </Modal>
 
-      {/* Undo Toast */}
-      <UndoToast
-        visible={undoToastVisible}
-        message={lastDeletedAmount ? `Removed ${mlToDisplay(lastDeletedAmount, settings.unitSystem)}` : ''}
-        onUndo={handleUndo}
-        onDismiss={handleDismissUndo}
-      />
     </SafeAreaView>
   );
 }
@@ -371,35 +313,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  logContainer: {
-    flex: 1,
-  },
-  logHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  logHeaderText: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+  clearAllButton: {
+    marginTop: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   clearAllText: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  logCard: {
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
   },
   modalOverlay: {
     flex: 1,
