@@ -148,8 +148,12 @@ export function HomeScreen() {
             goalMl={settings.dailyGoalMl}
             unitSystem={settings.unitSystem}
           />
-          {isViewingToday && todayLog.entries.length > 0 && (
-            <TouchableOpacity onPress={handleClearAll} style={styles.clearAllButton}>
+          {isViewingToday && (
+            <TouchableOpacity
+              onPress={handleClearAll}
+              style={[styles.clearAllButton, { opacity: todayLog.entries.length > 0 ? 1 : 0 }]}
+              disabled={todayLog.entries.length === 0}
+            >
               <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
             </TouchableOpacity>
           )}

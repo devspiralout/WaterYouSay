@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../context/ThemeContext';
 import { WaterEntry } from '../types';
@@ -35,23 +35,46 @@ export function ProgressRing({
 }: ProgressRingProps) {
   const { colors } = useTheme();
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [animatedProgress, setAnimatedProgress] = useState(progress);
+  const animationRef = useRef(new Animated.Value(progress)).current;
 
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const center = size / 2;
 
+  // Animate progress changes
+  useEffect(() => {
+    const listener = animationRef.addListener(({ value }) => {
+      setAnimatedProgress(value);
+    });
+
+    Animated.timing(animationRef, {
+      toValue: progress,
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    return () => {
+      animationRef.removeListener(listener);
+    };
+  }, [progress, animationRef]);
+
+  // Check if goal is met (use threshold for floating point precision)
+  const goalMet = animatedProgress >= 99.9;
+
   // Gap between segments in degrees (1px approximate)
   const gapDegrees = entries.length > 1 ? 1 : 0;
 
-  // Calculate segments
+  // Calculate segments with animated progress
   const segments = useMemo(() => {
     if (entries.length === 0) return [];
 
     const totalMl = entries.reduce((sum, e) => sum + e.amountMl, 0);
     if (totalMl === 0) return [];
 
-    // Maximum angle is based on progress towards goal (max 360)
-    const maxAngle = Math.min((totalMl / goalMl) * 360, 360);
+    // Maximum angle is based on animated progress (max 360)
+    const maxAngle = Math.min((animatedProgress / 100) * 360, 360);
     const totalGapAngle = gapDegrees * (entries.length - 1);
     const availableAngle = Math.max(maxAngle - totalGapAngle, 0);
 
@@ -65,7 +88,7 @@ export function ProgressRing({
       currentAngle = currentAngle + sweepAngle + gapDegrees;
 
       // Single color - primary blue (or success green when goal met)
-      const segmentColor = progress >= 100 ? colors.success : colors.primary;
+      const segmentColor = goalMet ? colors.success : colors.primary;
 
       return {
         entry,
@@ -75,11 +98,21 @@ export function ProgressRing({
         index,
       };
     });
-  }, [entries, goalMl, progress, colors, gapDegrees]);
+  }, [entries, animatedProgress, colors, gapDegrees, goalMet]);
 
   // Convert angle to SVG arc path
   const createArcPath = (startAngle: number, sweepAngle: number) => {
     if (sweepAngle <= 0) return '';
+
+    // SVG arcs can't draw a full circle (start and end points would be same)
+    // So for full circles, draw two half-circles
+    if (sweepAngle >= 359.9) {
+      const topX = center;
+      const topY = center - radius;
+      const bottomX = center;
+      const bottomY = center + radius;
+      return `M ${topX} ${topY} A ${radius} ${radius} 0 1 1 ${bottomX} ${bottomY} A ${radius} ${radius} 0 1 1 ${topX} ${topY}`;
+    }
 
     const startRad = (startAngle * Math.PI) / 180;
     const endRad = ((startAngle + sweepAngle) * Math.PI) / 180;
@@ -155,10 +188,10 @@ export function ProgressRing({
         ))}
 
         {/* If no entries but has progress, show single arc */}
-        {entries.length === 0 && progress > 0 && (
+        {entries.length === 0 && animatedProgress > 0 && (
           <Path
-            d={createArcPath(-90, (progress / 100) * 360)}
-            stroke={progress >= 100 ? colors.success : colors.primary}
+            d={createArcPath(-90, (animatedProgress / 100) * 360)}
+            stroke={goalMet ? colors.success : colors.primary}
             strokeWidth={strokeWidth}
             strokeLinecap="butt"
             fill="none"
@@ -172,11 +205,9 @@ export function ProgressRing({
           <Text style={[styles.goalLabel, { color: colors.textTertiary }]}>of </Text>
           <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>{goalAmount}</Text>
         </View>
-        {entries.length > 0 && (
-          <Text style={[styles.entryCount, { color: colors.textTertiary }]}>
-            {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
-          </Text>
-        )}
+        <Text style={[styles.entryCount, { color: entries.length > 0 ? colors.textTertiary : 'transparent' }]}>
+          {entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : 'no entries'}
+        </Text>
       </View>
 
       {/* Tooltip */}
