@@ -16,11 +16,9 @@ interface ProgressRingProps {
   unitSystem?: 'metric' | 'imperial';
 }
 
-interface TooltipData {
-  amount: string;
-  time: string;
-  x: number;
-  y: number;
+interface SelectedSegment {
+  entry: WaterEntry;
+  index: number;
 }
 
 export function ProgressRing({
@@ -34,12 +32,13 @@ export function ProgressRing({
   unitSystem = 'metric',
 }: ProgressRingProps) {
   const { colors } = useTheme();
-  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [selectedSegment, setSelectedSegment] = useState<SelectedSegment | null>(null);
   const [animatedProgress, setAnimatedProgress] = useState(progress);
   const animationRef = useRef(new Animated.Value(progress)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
+  const expandedStrokeWidth = strokeWidth + 6;
   const center = size / 2;
 
   // Animate progress changes
@@ -59,6 +58,16 @@ export function ProgressRing({
       animationRef.removeListener(listener);
     };
   }, [progress, animationRef]);
+
+  // Animate selection
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: selectedSegment ? 1.02 : 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 20,
+    }).start();
+  }, [selectedSegment, scaleAnim]);
 
   // Check if goal is met (use threshold for floating point precision)
   const goalMet = animatedProgress >= 99.9;
@@ -101,132 +110,173 @@ export function ProgressRing({
   }, [entries, animatedProgress, colors, gapDegrees, goalMet]);
 
   // Convert angle to SVG arc path
-  const createArcPath = (startAngle: number, sweepAngle: number) => {
+  const createArcPath = (startAngle: number, sweepAngle: number, arcRadius: number) => {
     if (sweepAngle <= 0) return '';
 
     // SVG arcs can't draw a full circle (start and end points would be same)
     // So for full circles, draw two half-circles
     if (sweepAngle >= 359.9) {
       const topX = center;
-      const topY = center - radius;
+      const topY = center - arcRadius;
       const bottomX = center;
-      const bottomY = center + radius;
-      return `M ${topX} ${topY} A ${radius} ${radius} 0 1 1 ${bottomX} ${bottomY} A ${radius} ${radius} 0 1 1 ${topX} ${topY}`;
+      const bottomY = center + arcRadius;
+      return `M ${topX} ${topY} A ${arcRadius} ${arcRadius} 0 1 1 ${bottomX} ${bottomY} A ${arcRadius} ${arcRadius} 0 1 1 ${topX} ${topY}`;
     }
 
     const startRad = (startAngle * Math.PI) / 180;
     const endRad = ((startAngle + sweepAngle) * Math.PI) / 180;
 
-    const x1 = center + radius * Math.cos(startRad);
-    const y1 = center + radius * Math.sin(startRad);
-    const x2 = center + radius * Math.cos(endRad);
-    const y2 = center + radius * Math.sin(endRad);
+    const x1 = center + arcRadius * Math.cos(startRad);
+    const y1 = center + arcRadius * Math.sin(startRad);
+    const x2 = center + arcRadius * Math.cos(endRad);
+    const y2 = center + arcRadius * Math.sin(endRad);
 
     const largeArc = sweepAngle > 180 ? 1 : 0;
 
-    return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`;
-  };
-
-  // Get position for tooltip based on segment midpoint
-  const getSegmentMidpoint = (startAngle: number, sweepAngle: number) => {
-    const midAngle = ((startAngle + sweepAngle / 2) * Math.PI) / 180;
-    const tooltipRadius = radius + 40;
-    return {
-      x: center + tooltipRadius * Math.cos(midAngle),
-      y: center + tooltipRadius * Math.sin(midAngle),
-    };
+    return `M ${x1} ${y1} A ${arcRadius} ${arcRadius} 0 ${largeArc} 1 ${x2} ${y2}`;
   };
 
   const handleSegmentPress = (segment: typeof segments[0]) => {
-    const { x, y } = getSegmentMidpoint(segment.startAngle, segment.sweepAngle);
-    const time = new Date(segment.entry.timestamp).toLocaleTimeString('en-US', {
+    if (selectedSegment?.index === segment.index) {
+      // Deselect if tapping same segment
+      setSelectedSegment(null);
+    } else {
+      setSelectedSegment({
+        entry: segment.entry,
+        index: segment.index,
+      });
+
+      // Auto-deselect after 4 seconds
+      setTimeout(() => {
+        setSelectedSegment((current) =>
+          current?.index === segment.index ? null : current
+        );
+      }, 4000);
+    }
+  };
+
+  const handleContainerPress = () => {
+    if (selectedSegment) {
+      setSelectedSegment(null);
+    }
+  };
+
+  // Format time for display
+  const formatTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
     });
-    setTooltip({
-      amount: mlToDisplay(segment.entry.amountMl, unitSystem),
-      time,
-      x,
-      y,
-    });
-
-    // Auto-hide tooltip
-    setTimeout(() => setTooltip(null), 2500);
   };
 
-  const dismissTooltip = () => setTooltip(null);
+  // Determine what to show in center
+  const centerContent = useMemo(() => {
+    if (selectedSegment) {
+      return {
+        main: mlToDisplay(selectedSegment.entry.amountMl, unitSystem),
+        sub: formatTime(selectedSegment.entry.timestamp),
+        detail: `Entry ${selectedSegment.index + 1} of ${entries.length}`,
+      };
+    }
+    return {
+      main: currentAmount,
+      sub: `of ${goalAmount}`,
+      detail: entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : '',
+    };
+  }, [selectedSegment, currentAmount, goalAmount, entries.length, unitSystem]);
 
   return (
     <TouchableOpacity
       style={styles.container}
       activeOpacity={1}
-      onPress={dismissTooltip}
+      onPress={handleContainerPress}
     >
-      <Svg width={size} height={size} style={styles.svg}>
-        {/* Background circle */}
-        <Circle
-          cx={center}
-          cy={center}
-          r={radius}
-          stroke={colors.border}
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-
-        {/* Entry segments */}
-        {segments.map((segment) => (
-          <Path
-            key={segment.entry.id}
-            d={createArcPath(segment.startAngle, segment.sweepAngle)}
-            stroke={segment.color}
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <Svg width={size} height={size} style={styles.svg}>
+          {/* Background circle */}
+          <Circle
+            cx={center}
+            cy={center}
+            r={radius}
+            stroke={colors.border}
             strokeWidth={strokeWidth}
-            strokeLinecap="butt"
-            fill="none"
-            onPress={() => handleSegmentPress(segment)}
-          />
-        ))}
-
-        {/* If no entries but has progress, show single arc */}
-        {entries.length === 0 && animatedProgress > 0 && (
-          <Path
-            d={createArcPath(-90, (animatedProgress / 100) * 360)}
-            stroke={goalMet ? colors.success : colors.primary}
-            strokeWidth={strokeWidth}
-            strokeLinecap="butt"
             fill="none"
           />
-        )}
-      </Svg>
+
+          {/* Entry segments - non-selected */}
+          {segments.map((segment) => {
+            const isSelected = selectedSegment?.index === segment.index;
+            if (isSelected) return null; // Render selected segment last
+
+            return (
+              <Path
+                key={segment.entry.id}
+                d={createArcPath(segment.startAngle, segment.sweepAngle, radius)}
+                stroke={selectedSegment ? segment.color + '60' : segment.color}
+                strokeWidth={strokeWidth}
+                strokeLinecap="butt"
+                fill="none"
+                onPress={() => handleSegmentPress(segment)}
+              />
+            );
+          })}
+
+          {/* Selected segment - rendered last to be on top */}
+          {selectedSegment && segments[selectedSegment.index] && (
+            <Path
+              d={createArcPath(
+                segments[selectedSegment.index].startAngle,
+                segments[selectedSegment.index].sweepAngle,
+                radius
+              )}
+              stroke={segments[selectedSegment.index].color}
+              strokeWidth={expandedStrokeWidth}
+              strokeLinecap="round"
+              fill="none"
+              onPress={() => handleSegmentPress(segments[selectedSegment.index])}
+            />
+          )}
+
+          {/* If no entries but has progress, show single arc */}
+          {entries.length === 0 && animatedProgress > 0 && (
+            <Path
+              d={createArcPath(-90, (animatedProgress / 100) * 360, radius)}
+              stroke={goalMet ? colors.success : colors.primary}
+              strokeWidth={strokeWidth}
+              strokeLinecap="butt"
+              fill="none"
+            />
+          )}
+        </Svg>
+      </Animated.View>
 
       <View style={[styles.textContainer, { width: size, height: size }]}>
-        <Text style={[styles.currentAmount, { color: colors.text }]}>{currentAmount}</Text>
-        <View style={styles.goalContainer}>
-          <Text style={[styles.goalLabel, { color: colors.textTertiary }]}>of </Text>
-          <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>{goalAmount}</Text>
-        </View>
-        <Text style={[styles.entryCount, { color: entries.length > 0 ? colors.textTertiary : 'transparent' }]}>
-          {entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : 'no entries'}
-        </Text>
+        <Animated.View style={[styles.centerContent, { transform: [{ scale: scaleAnim }] }]}>
+          <Text
+            style={[
+              styles.currentAmount,
+              { color: selectedSegment ? colors.primary : colors.text },
+              selectedSegment && styles.selectedAmount,
+            ]}
+          >
+            {centerContent.main}
+          </Text>
+          <View style={styles.goalContainer}>
+            <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>
+              {centerContent.sub}
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.entryCount,
+              { color: centerContent.detail ? colors.textTertiary : 'transparent' }
+            ]}
+          >
+            {centerContent.detail || 'no entries'}
+          </Text>
+        </Animated.View>
       </View>
-
-      {/* Tooltip */}
-      {tooltip && (
-        <View
-          style={[
-            styles.tooltip,
-            {
-              backgroundColor: colors.surface,
-              left: tooltip.x - 50,
-              top: tooltip.y - 20,
-              shadowColor: colors.text,
-            },
-          ]}
-        >
-          <Text style={[styles.tooltipAmount, { color: colors.text }]}>{tooltip.amount}</Text>
-          <Text style={[styles.tooltipTime, { color: colors.textSecondary }]}>{tooltip.time}</Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 }
@@ -243,10 +293,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  centerContent: {
+    alignItems: 'center',
+  },
   currentAmount: {
     fontSize: 56,
     fontWeight: '200',
     letterSpacing: -2,
+  },
+  selectedAmount: {
+    fontSize: 48,
+    fontWeight: '300',
   },
   goalContainer: {
     flexDirection: 'row',
@@ -264,25 +321,5 @@ const styles = StyleSheet.create({
   entryCount: {
     fontSize: 13,
     marginTop: 8,
-  },
-  tooltip: {
-    position: 'absolute',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-    minWidth: 80,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  tooltipAmount: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  tooltipTime: {
-    fontSize: 12,
-    marginTop: 2,
   },
 });
