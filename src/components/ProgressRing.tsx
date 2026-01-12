@@ -4,6 +4,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../context/ThemeContext';
 import { WaterEntry } from '../types';
 import { mlToDisplay } from '../utils/units';
+import { lightTap } from '../utils/haptics';
 
 interface ProgressRingProps {
   progress: number;
@@ -139,6 +140,7 @@ export function ProgressRing({
   };
 
   const handleSegmentPress = (segment: typeof segments[0]) => {
+    lightTap();
     if (selectedSegment?.index === segment.index) {
       // Deselect if tapping same segment
       setSelectedSegment(null);
