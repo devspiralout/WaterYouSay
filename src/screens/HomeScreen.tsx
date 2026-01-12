@@ -35,6 +35,7 @@ export function HomeScreen() {
   const [customAmount, setCustomAmount] = useState('');
   const progressRingRef = useRef<ProgressRingRef>(null);
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
 
   const { todayLog, settings, history } = state;
   const isViewingToday = isToday(selectedDate);
@@ -167,6 +168,7 @@ export function HomeScreen() {
         todayLog={todayLog}
         history={history}
         dailyGoalMl={effectiveGoalMl}
+        onExpandedChange={setCalendarExpanded}
       />
 
       <View style={styles.mainContent} {...panResponder.panHandlers}>
@@ -184,7 +186,7 @@ export function HomeScreen() {
 
           {/* Past day message */}
           {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
-            <View style={styles.pastDayMessage}>
+            <View style={[styles.pastDayMessage, { bottom: calendarExpanded ? -60 : 20 }]}>
               <Text style={[styles.pastDayText, { color: colors.textSecondary }]}>
                 You drank {mlToDisplay(selectedDayData.totalMl, settings.unitSystem)} this day
               </Text>
@@ -193,7 +195,7 @@ export function HomeScreen() {
 
           {/* Future day message */}
           {isViewingFuture && (
-            <View style={styles.pastDayMessage}>
+            <View style={[styles.pastDayMessage, { bottom: calendarExpanded ? -60 : 20 }]}>
               <Text style={[styles.pastDayText, { color: colors.textTertiary }]}>
                 Future date
               </Text>
@@ -203,7 +205,7 @@ export function HomeScreen() {
 
         {/* Quick Add Buttons - Bottom (always rendered to maintain layout) */}
         <TouchableWithoutFeedback onPress={() => progressRingRef.current?.clearSelection()}>
-          <View style={[styles.quickAddContainer, { opacity: isViewingToday ? 1 : 0 }]} pointerEvents={isViewingToday ? 'auto' : 'none'}>
+          <View style={[styles.quickAddContainer, { opacity: isViewingToday && !calendarExpanded ? 1 : 0 }]} pointerEvents={isViewingToday && !calendarExpanded ? 'auto' : 'none'}>
             <View style={styles.buttonRow}>
               {quickAddAmounts.map(({ ml, display }) => (
                 <WaterButton
@@ -307,17 +309,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 16,
   },
   quickAddContainer: {
     paddingBottom: 40,
   },
   pastDayMessage: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingBottom: 16,
   },
   pastDayText: {
     fontSize: 16,

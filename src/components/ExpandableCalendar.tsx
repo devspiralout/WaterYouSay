@@ -26,6 +26,7 @@ interface ExpandableCalendarProps {
   todayLog: DailyLog;
   history: HistoryEntry[];
   dailyGoalMl: number;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -36,6 +37,7 @@ export function ExpandableCalendar({
   todayLog,
   history,
   dailyGoalMl,
+  onExpandedChange,
 }: ExpandableCalendarProps) {
   const { colors } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -89,6 +91,30 @@ export function ExpandableCalendar({
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }, [selectedDate]);
 
+  // Navigate to previous/next month
+  const changeMonth = (direction: -1 | 1) => {
+    lightTap();
+    const current = new Date(selectedDate + 'T12:00:00');
+    current.setMonth(current.getMonth() + direction);
+    // Set to first day of the month
+    current.setDate(1);
+
+    // Don't allow navigating to future months
+    const today = new Date();
+    if (direction === 1 && current > today) {
+      return;
+    }
+
+    onSelectDate(formatDateString(current));
+  };
+
+  const canGoNext = useMemo(() => {
+    const current = new Date(selectedDate + 'T12:00:00');
+    const nextMonth = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+    const today = new Date();
+    return nextMonth <= today;
+  }, [selectedDate]);
+
   const getDayData = (dateStr: string): { totalMl: number; progress: number } => {
     if (isToday(dateStr)) {
       return {
@@ -111,7 +137,9 @@ export function ExpandableCalendar({
   const toggleExpanded = () => {
     lightTap();
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsExpanded(!isExpanded);
+    const newExpanded = !isExpanded;
+    setIsExpanded(newExpanded);
+    onExpandedChange?.(newExpanded);
   };
 
   const handleDateSelect = (dateStr: string) => {
@@ -119,6 +147,7 @@ export function ExpandableCalendar({
     if (isExpanded) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setIsExpanded(false);
+      onExpandedChange?.(false);
     }
   };
 
@@ -193,9 +222,26 @@ export function ExpandableCalendar({
 
   return (
     <View style={styles.wrapper}>
-      {/* Month label when expanded */}
+      {/* Month label with navigation when expanded */}
       {isExpanded && (
-        <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
+        <View style={styles.monthHeader}>
+          <TouchableOpacity
+            onPress={() => changeMonth(-1)}
+            style={styles.monthArrow}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={[styles.monthArrowText, { color: colors.primary }]}>‹</Text>
+          </TouchableOpacity>
+          <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
+          <TouchableOpacity
+            onPress={() => changeMonth(1)}
+            style={[styles.monthArrow, !canGoNext && styles.monthArrowDisabled]}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            disabled={!canGoNext}
+          >
+            <Text style={[styles.monthArrowText, { color: canGoNext ? colors.primary : colors.textTertiary }]}>›</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Calendar content */}
@@ -289,19 +335,37 @@ const styles = StyleSheet.create({
   },
   handleContainer: {
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingBottom: 8,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   handle: {
     width: 40,
     height: 5,
     borderRadius: 2.5,
   },
+  monthHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+    paddingHorizontal: 16,
+  },
   monthLabel: {
     fontSize: 17,
     fontWeight: '600',
     textAlign: 'center',
-    paddingTop: 8,
-    paddingBottom: 4,
+    flex: 1,
+  },
+  monthArrow: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  monthArrowDisabled: {
+    opacity: 0.3,
+  },
+  monthArrowText: {
+    fontSize: 28,
+    fontWeight: '300',
   },
 });
