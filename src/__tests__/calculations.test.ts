@@ -241,8 +241,8 @@ describe('isFutureDate', () => {
 
 describe('formatDateString', () => {
   it('should format date as YYYY-MM-DD', () => {
-    // Use UTC time to avoid timezone issues with toISOString()
-    const date = new Date('2024-03-15T12:00:00Z');
+    // Create date using local time components
+    const date = new Date(2024, 2, 15, 12, 0, 0); // March 15, 2024 (month is 0-indexed)
     expect(formatDateString(date)).toBe('2024-03-15');
   });
 

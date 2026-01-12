@@ -23,7 +23,11 @@ export function WeekCalendar({
 }: WeekCalendarProps) {
   const { colors } = useTheme();
 
-  const weekDates = useMemo(() => getWeekDates(), []);
+  // Get week dates based on selected date (so calendar follows when swiping to different weeks)
+  const weekDates = useMemo(() => {
+    const selectedDateObj = new Date(selectedDate + 'T12:00:00');
+    return getWeekDates(selectedDateObj);
+  }, [selectedDate]);
 
   const getDayData = (dateStr: string): { totalMl: number; progress: number } => {
     if (isToday(dateStr)) {

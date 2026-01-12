@@ -90,11 +90,14 @@ export function calculateProgress(currentMl: number, goalMl: number): number {
 }
 
 /**
- * Get today's date as YYYY-MM-DD string
+ * Get today's date as YYYY-MM-DD string (local timezone)
  */
 export function getTodayDateString(): string {
   const now = new Date();
-  return now.toISOString().split('T')[0];
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -124,7 +127,7 @@ export function calculateStreak(
     // If today's goal isn't met yet, check if yesterday started a streak
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = formatDateString(yesterday);
 
     const yesterdayLog = sortedHistory.find(log => log.date === yesterdayStr);
     if (!yesterdayLog || yesterdayLog.totalMl < goalMl) {
@@ -139,7 +142,7 @@ export function calculateStreak(
   }
 
   for (const log of sortedHistory) {
-    const expectedDate = checkDate.toISOString().split('T')[0];
+    const expectedDate = formatDateString(checkDate);
 
     if (log.date === expectedDate && log.totalMl >= goalMl) {
       if (todayTotal >= goalMl || log.date !== today) {
@@ -195,8 +198,11 @@ export function isFutureDate(dateStr: string): boolean {
 }
 
 /**
- * Format a date as a date string (YYYY-MM-DD)
+ * Format a date as a date string (YYYY-MM-DD) in local timezone
  */
 export function formatDateString(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

@@ -7,6 +7,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -17,7 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { ProgressRing } from '../components/ProgressRing';
 import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { WaterBackground } from '../components/WaterBackground';
-import { calculateProgress, getTodayDateString, isToday, isFutureDate } from '../utils/calculations';
+import { calculateProgress, getTodayDateString, isToday, isFutureDate, formatDateString } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, warningFeedback } from '../utils/haptics';
 import { loadSounds, playWaterSound } from '../utils/sounds';
@@ -40,6 +41,42 @@ export function HomeScreen() {
   const { todayLog, settings, history } = state;
   const isViewingToday = isToday(selectedDate);
   const isViewingFuture = isFutureDate(selectedDate);
+
+  // Swipe gesture handler for changing days
+  const panResponder = useMemo(() => {
+    const SWIPE_THRESHOLD = 50;
+
+    const changeDate = (days: number) => {
+      const current = new Date(selectedDate + 'T12:00:00');
+      current.setDate(current.getDate() + days);
+      const newDateStr = formatDateString(current);
+
+      // Don't allow swiping to future dates
+      if (days > 0 && isFutureDate(newDateStr)) {
+        return;
+      }
+
+      mediumTap();
+      setSelectedDate(newDateStr);
+    };
+
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only respond to horizontal swipes
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > SWIPE_THRESHOLD) {
+          // Swipe right - go to previous day
+          changeDate(-1);
+        } else if (gestureState.dx < -SWIPE_THRESHOLD) {
+          // Swipe left - go to next day
+          changeDate(1);
+        }
+      },
+    });
+  }, [selectedDate]);
 
   // Get data for the selected date
   const selectedDayData = useMemo(() => {
@@ -151,7 +188,7 @@ export function HomeScreen() {
         dailyGoalMl={settings.dailyGoalMl}
       />
 
-      <View style={styles.mainContent}>
+      <View style={styles.mainContent} {...panResponder.panHandlers}>
         {/* Progress Ring - Centered */}
         <View style={styles.progressContainer}>
           <ProgressRing
@@ -317,8 +354,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   pastDayMessage: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    marginTop: 16,
+    paddingBottom: 16,
   },
   pastDayText: {
     fontSize: 16,
