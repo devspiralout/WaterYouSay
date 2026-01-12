@@ -11,7 +11,9 @@ import {
   HistoryEntry,
   AchievementId,
   UnlockedAchievement,
+  ClimateAdjustmentInfo,
 } from '../types';
+import { fetchWeather, calculateClimateAdjustment, getAdjustedGoal } from '../utils/weather';
 import { DEFAULT_DAILY_GOAL_ML } from '../constants';
 import {
   saveProfile,
@@ -40,6 +42,7 @@ type Action =
   | { type: 'SET_QUICK_ADD_AMOUNTS'; payload: { amounts: number[] } }
   | { type: 'SET_SOUND_ENABLED'; payload: { enabled: boolean } }
   | { type: 'SET_THEME_MODE'; payload: { mode: ThemeMode } }
+  | { type: 'SET_CLIMATE_ENABLED'; payload: { enabled: boolean } }
   | { type: 'COMPLETE_ONBOARDING' }
   | { type: 'RESET_ONBOARDING' }
   | { type: 'CLEAR_TODAY' }
@@ -61,6 +64,9 @@ const initialState: AppState = {
     quickAddAmounts: [100, 250, 500],
     soundEnabled: true,
     themeMode: 'system',
+    climate: {
+      enabled: true, // On by default
+    },
   },
   todayLog: {
     date: getTodayDateString(),
@@ -179,6 +185,18 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
 
+    case 'SET_CLIMATE_ENABLED':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          climate: {
+            ...state.settings.climate,
+            enabled: action.payload.enabled,
+          },
+        },
+      };
+
     case 'COMPLETE_ONBOARDING':
       return {
         ...state,
@@ -240,6 +258,7 @@ const WaterContext = createContext<WaterContextType | undefined>(undefined);
 export function WaterProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [pendingAchievement, setPendingAchievement] = useState<AchievementId | null>(null);
+  const [climateAdjustment, setClimateAdjustment] = useState<ClimateAdjustmentInfo | null>(null);
 
   // Load saved data on mount
   useEffect(() => {
@@ -311,6 +330,40 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     }
   }, [state.todayLog, state.history, state.settings.dailyGoalMl, state.unlockedAchievements, pendingAchievement]);
 
+  // Fetch weather and calculate climate adjustment
+  const refreshClimate = async () => {
+    const { climate, dailyGoalMl } = state.settings;
+
+    if (!climate.enabled) {
+      setClimateAdjustment(null);
+      return;
+    }
+
+    const weather = await fetchWeather();
+    if (weather) {
+      const adjustment = calculateClimateAdjustment(weather);
+      const adjustedGoal = getAdjustedGoal(dailyGoalMl, adjustment);
+
+      setClimateAdjustment({
+        percentage: adjustment.percentage,
+        reason: adjustment.reason,
+        temperature: adjustment.temperature,
+        adjustedGoalMl: adjustedGoal,
+      });
+    } else {
+      setClimateAdjustment(null);
+    }
+  };
+
+  // Refresh climate on mount and when settings change
+  useEffect(() => {
+    if (state.settings.climate.enabled) {
+      refreshClimate();
+    } else {
+      setClimateAdjustment(null);
+    }
+  }, [state.settings.climate.enabled, state.settings.dailyGoalMl]);
+
   const contextValue: WaterContextType = {
     state,
     addWater: (amountMl: number) => {
@@ -340,6 +393,11 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     setThemeMode: (mode: ThemeMode) => {
       dispatch({ type: 'SET_THEME_MODE', payload: { mode } });
     },
+    setClimateEnabled: (enabled: boolean) => {
+      dispatch({ type: 'SET_CLIMATE_ENABLED', payload: { enabled } });
+    },
+    climateAdjustment,
+    refreshClimate,
     completeOnboarding: () => {
       dispatch({ type: 'COMPLETE_ONBOARDING' });
     },

@@ -15,8 +15,6 @@ interface ProgressRingProps {
   entries?: WaterEntry[];
   goalMl?: number;
   unitSystem?: 'metric' | 'imperial';
-  onClearAll?: () => void;
-  showClearAll?: boolean;
 }
 
 export interface ProgressRingRef {
@@ -37,8 +35,6 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   entries = [],
   goalMl = 2500,
   unitSystem = 'metric',
-  onClearAll,
-  showClearAll = false,
 }, ref) => {
   const { colors } = useTheme();
   const [selectedSegment, setSelectedSegment] = useState<SelectedSegment | null>(null);
@@ -280,15 +276,6 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
           >
             {centerContent.detail || 'no entries'}
           </Text>
-          {showClearAll && onClearAll && !selectedSegment && (
-            <TouchableOpacity
-              onPress={onClearAll}
-              style={styles.clearAllButton}
-              hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
-            >
-              <Text style={[styles.clearAllText, { color: colors.textTertiary }]}>Clear All</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -337,14 +324,5 @@ const styles = StyleSheet.create({
   entryCount: {
     fontSize: 13,
     marginTop: 8,
-  },
-  clearAllButton: {
-    marginTop: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  clearAllText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
 });

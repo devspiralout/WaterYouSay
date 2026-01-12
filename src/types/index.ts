@@ -47,6 +47,10 @@ export interface ReminderSettings {
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+export interface ClimateSettings {
+  enabled: boolean;
+}
+
 export interface AppSettings {
   unitSystem: UnitSystem;
   dailyGoalMl: number;
@@ -55,6 +59,7 @@ export interface AppSettings {
   quickAddAmounts: number[]; // in ml
   soundEnabled: boolean;
   themeMode: ThemeMode;
+  climate: ClimateSettings;
 }
 
 export interface AppState {
@@ -91,6 +96,13 @@ export interface UnlockedAchievement {
   unlockedAt: string; // ISO date string
 }
 
+export interface ClimateAdjustmentInfo {
+  percentage: number;
+  reason: string;
+  temperature: number;
+  adjustedGoalMl: number;
+}
+
 export interface WaterContextType {
   state: AppState;
   addWater: (amountMl: number) => void;
@@ -102,6 +114,9 @@ export interface WaterContextType {
   setQuickAddAmounts: (amounts: number[]) => void;
   setSoundEnabled: (enabled: boolean) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setClimateEnabled: (enabled: boolean) => void;
+  climateAdjustment: ClimateAdjustmentInfo | null;
+  refreshClimate: () => Promise<void>;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   clearToday: () => void;

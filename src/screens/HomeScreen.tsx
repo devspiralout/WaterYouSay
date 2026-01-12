@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Alert,
   PanResponder,
   TouchableWithoutFeedback,
 } from 'react-native';
@@ -21,7 +20,7 @@ import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { WaterBackground } from '../components/WaterBackground';
 import { calculateProgress, getTodayDateString, isToday, isFutureDate, formatDateString } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
-import { mediumTap, warningFeedback } from '../utils/haptics';
+import { mediumTap } from '../utils/haptics';
 import { loadSounds, playWaterSound } from '../utils/sounds';
 import { ExpandableCalendar } from '../components/ExpandableCalendar';
 import { TrophyIcon } from '../components/TrophyIcon';
@@ -29,7 +28,7 @@ import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
 
 export function HomeScreen() {
-  const { state, addWater, clearToday } = useWater();
+  const { state, addWater, climateAdjustment } = useWater();
   const { colors } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
@@ -40,6 +39,11 @@ export function HomeScreen() {
   const { todayLog, settings, history } = state;
   const isViewingToday = isToday(selectedDate);
   const isViewingFuture = isFutureDate(selectedDate);
+
+  // Calculate effective goal with climate adjustment
+  const effectiveGoalMl = climateAdjustment
+    ? climateAdjustment.adjustedGoalMl
+    : settings.dailyGoalMl;
 
   // Swipe gesture handler for changing days
   const panResponder = useMemo(() => {
@@ -86,7 +90,7 @@ export function HomeScreen() {
     return { totalMl: historyEntry?.totalMl || 0, entries: [] };
   }, [selectedDate, isViewingToday, todayLog, history]);
 
-  const progress = calculateProgress(selectedDayData.totalMl, settings.dailyGoalMl);
+  const progress = calculateProgress(selectedDayData.totalMl, effectiveGoalMl);
   const quickAddAmounts = getQuickAddAmounts(settings.unitSystem, settings.quickAddAmounts);
 
   // Format selected date for header
@@ -136,24 +140,6 @@ export function HomeScreen() {
     }
   };
 
-  const handleClearAll = () => {
-    Alert.alert(
-      'Clear All Entries',
-      'Are you sure you want to clear all of today\'s water entries?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: () => {
-            warningFeedback();
-            clearToday();
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <WaterBackground progress={progress} />
@@ -180,7 +166,7 @@ export function HomeScreen() {
         onSelectDate={setSelectedDate}
         todayLog={todayLog}
         history={history}
-        dailyGoalMl={settings.dailyGoalMl}
+        dailyGoalMl={effectiveGoalMl}
       />
 
       <View style={styles.mainContent} {...panResponder.panHandlers}>
@@ -190,12 +176,10 @@ export function HomeScreen() {
             ref={progressRingRef}
             progress={progress}
             currentAmount={mlToDisplay(selectedDayData.totalMl, settings.unitSystem)}
-            goalAmount={mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
+            goalAmount={mlToDisplay(effectiveGoalMl, settings.unitSystem)}
             entries={isViewingToday ? todayLog.entries : []}
-            goalMl={settings.dailyGoalMl}
+            goalMl={effectiveGoalMl}
             unitSystem={settings.unitSystem}
-            onClearAll={handleClearAll}
-            showClearAll={isViewingToday && todayLog.entries.length > 0}
           />
 
           {/* Past day message */}

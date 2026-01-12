@@ -45,7 +45,7 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 export function SettingsScreen() {
-  const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, resetOnboarding, loadMockData } = useWater();
+  const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, setClimateEnabled, climateAdjustment, resetOnboarding, loadMockData } = useWater();
   const { colors } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const { settings, profile, history, todayLog } = state;
@@ -459,6 +459,39 @@ export function SettingsScreen() {
               ))}
             </View>
           </View>
+        </View>
+
+        {/* Climate Adjustment */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>CLIMATE ADJUSTMENT</Text>
+          <View style={[styles.reminderCard, dynamicStyles.reminderCard]}>
+            <View style={styles.reminderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Adjust for Weather</Text>
+                <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>
+                  {settings.climate?.enabled && climateAdjustment
+                    ? `${climateAdjustment.temperature}°C${climateAdjustment.percentage > 0 ? ` (+${climateAdjustment.percentage}%)` : ''}`
+                    : 'Increase goal based on local temperature'}
+                </Text>
+              </View>
+              <Switch
+                value={settings.climate?.enabled ?? true}
+                onValueChange={setClimateEnabled}
+                trackColor={{ false: colors.border, true: colors.primaryMuted }}
+                thumbColor={settings.climate?.enabled ? colors.primary : colors.textTertiary}
+              />
+            </View>
+            {settings.climate?.enabled && climateAdjustment && climateAdjustment.reason && (
+              <View style={[styles.intervalRow, dynamicStyles.intervalRow]}>
+                <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>
+                  {climateAdjustment.reason}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.disclaimer, dynamicStyles.disclaimer]}>
+            Uses your location to get current temperature and adjust your hydration goal accordingly.
+          </Text>
         </View>
 
         {/* Profile */}

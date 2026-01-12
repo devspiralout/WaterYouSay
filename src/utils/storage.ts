@@ -49,6 +49,7 @@ export async function loadSettings(): Promise<AppSettings> {
         quickAddAmounts: settings.quickAddAmounts || DEFAULT_QUICK_ADD_AMOUNTS,
         soundEnabled: settings.soundEnabled ?? true,
         themeMode: settings.themeMode || 'system',
+        climate: settings.climate || { enabled: true },
       };
     }
   } catch (error) {
@@ -64,6 +65,9 @@ export async function loadSettings(): Promise<AppSettings> {
     quickAddAmounts: DEFAULT_QUICK_ADD_AMOUNTS,
     soundEnabled: true,
     themeMode: 'system',
+    climate: {
+      enabled: true,
+    },
   };
 }
 
