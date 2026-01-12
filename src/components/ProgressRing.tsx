@@ -188,12 +188,12 @@ export function ProgressRing({
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[styles.container, { width: size, height: size }]}
       activeOpacity={1}
       onPress={handleContainerPress}
     >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <Svg width={size} height={size} style={styles.svg}>
+      <Animated.View style={[styles.svgContainer, { width: size, height: size, transform: [{ scale: scaleAnim }] }]}>
+        <Svg width={size} height={size}>
           {/* Background circle */}
           <Circle
             cx={center}
@@ -286,8 +286,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  svg: {
+  svgContainer: {
     position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textContainer: {
     alignItems: 'center',
