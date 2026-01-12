@@ -162,15 +162,13 @@ export function HomeScreen() {
             goalMl={settings.dailyGoalMl}
             unitSystem={settings.unitSystem}
           />
-          {isViewingToday && (
-            <TouchableOpacity
-              onPress={handleClearAll}
-              style={[styles.clearAllButton, { opacity: todayLog.entries.length > 0 ? 1 : 0 }]}
-              disabled={todayLog.entries.length === 0}
-            >
-              <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={handleClearAll}
+            style={[styles.clearAllButton, { opacity: isViewingToday && todayLog.entries.length > 0 ? 1 : 0 }]}
+            disabled={!isViewingToday || todayLog.entries.length === 0}
+          >
+            <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
+          </TouchableOpacity>
 
           {/* Past day message */}
           {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
@@ -191,21 +189,19 @@ export function HomeScreen() {
           )}
         </View>
 
-        {/* Quick Add Buttons - Bottom */}
-        {isViewingToday && (
-          <View style={styles.quickAddContainer}>
-            <View style={styles.buttonRow}>
-              {quickAddAmounts.map(({ ml, display }) => (
-                <WaterButton
-                  key={ml}
-                  amount={display}
-                  onPress={() => handleQuickAdd(ml)}
-                />
-              ))}
-              <CustomAmountButton onPress={() => setCustomModalVisible(true)} />
-            </View>
+        {/* Quick Add Buttons - Bottom (always rendered to maintain layout) */}
+        <View style={[styles.quickAddContainer, { opacity: isViewingToday ? 1 : 0 }]} pointerEvents={isViewingToday ? 'auto' : 'none'}>
+          <View style={styles.buttonRow}>
+            {quickAddAmounts.map(({ ml, display }) => (
+              <WaterButton
+                key={ml}
+                amount={display}
+                onPress={() => handleQuickAdd(ml)}
+              />
+            ))}
+            <CustomAmountButton onPress={() => setCustomModalVisible(true)} />
           </View>
-        )}
+        </View>
       </View>
 
       {/* Custom Amount Modal */}
