@@ -37,9 +37,11 @@ export function ProgressRing({
   const animationRef = useRef(new Animated.Value(progress)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const radius = (size - strokeWidth) / 2;
   const expandedStrokeWidth = strokeWidth + 6;
-  const center = size / 2;
+  const padding = (expandedStrokeWidth - strokeWidth) / 2; // Extra space for expanded segments
+  const svgSize = size + padding * 2;
+  const radius = (size - strokeWidth) / 2;
+  const center = svgSize / 2;
 
   // Animate progress changes
   useEffect(() => {
@@ -188,12 +190,12 @@ export function ProgressRing({
 
   return (
     <TouchableOpacity
-      style={[styles.container, { width: size, height: size }]}
+      style={[styles.container, { width: svgSize, height: svgSize }]}
       activeOpacity={1}
       onPress={handleContainerPress}
     >
-      <Animated.View style={[styles.svgContainer, { width: size, height: size, transform: [{ scale: scaleAnim }] }]}>
-        <Svg width={size} height={size}>
+      <Animated.View style={[styles.svgContainer, { width: svgSize, height: svgSize, transform: [{ scale: scaleAnim }] }]}>
+        <Svg width={svgSize} height={svgSize}>
           {/* Background circle */}
           <Circle
             cx={center}
@@ -232,7 +234,7 @@ export function ProgressRing({
               )}
               stroke={segments[selectedSegment.index].color}
               strokeWidth={expandedStrokeWidth}
-              strokeLinecap="round"
+              strokeLinecap="butt"
               fill="none"
               onPress={() => handleSegmentPress(segments[selectedSegment.index])}
             />
@@ -251,7 +253,7 @@ export function ProgressRing({
         </Svg>
       </Animated.View>
 
-      <View style={[styles.textContainer, { width: size, height: size }]}>
+      <View style={[styles.textContainer, { width: svgSize, height: svgSize }]}>
         <Animated.View style={[styles.centerContent, { transform: [{ scale: scaleAnim }] }]}>
           <Text
             style={[
