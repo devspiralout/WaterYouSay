@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Modal,
   TextInput,
@@ -152,11 +151,8 @@ export function HomeScreen() {
         dailyGoalMl={settings.dailyGoalMl}
       />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Progress Ring */}
+      <View style={styles.mainContent}>
+        {/* Progress Ring - Centered */}
         <View style={styles.progressContainer}>
           <ProgressRing
             progress={progress}
@@ -175,9 +171,27 @@ export function HomeScreen() {
               <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
             </TouchableOpacity>
           )}
+
+          {/* Past day message */}
+          {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
+            <View style={styles.pastDayMessage}>
+              <Text style={[styles.pastDayText, { color: colors.textSecondary }]}>
+                You drank {mlToDisplay(selectedDayData.totalMl, settings.unitSystem)} this day
+              </Text>
+            </View>
+          )}
+
+          {/* Future day message */}
+          {isViewingFuture && (
+            <View style={styles.pastDayMessage}>
+              <Text style={[styles.pastDayText, { color: colors.textTertiary }]}>
+                Future date
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Quick Add Buttons - only show for today */}
+        {/* Quick Add Buttons - Bottom */}
         {isViewingToday && (
           <View style={styles.quickAddContainer}>
             <View style={styles.buttonRow}>
@@ -192,26 +206,7 @@ export function HomeScreen() {
             </View>
           </View>
         )}
-
-        {/* Past day message */}
-        {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
-          <View style={styles.pastDayMessage}>
-            <Text style={[styles.pastDayText, { color: colors.textSecondary }]}>
-              You drank {mlToDisplay(selectedDayData.totalMl, settings.unitSystem)} this day
-            </Text>
-          </View>
-        )}
-
-        {/* Future day message */}
-        {isViewingFuture && (
-          <View style={styles.pastDayMessage}>
-            <Text style={[styles.pastDayText, { color: colors.textTertiary }]}>
-              Future date
-            </Text>
-          </View>
-        )}
-
-      </ScrollView>
+      </View>
 
       {/* Custom Amount Modal */}
       <Modal
@@ -290,10 +285,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
+  mainContent: {
+    flex: 1,
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 120,
   },
   header: {
     flexDirection: 'row',
@@ -318,16 +313,16 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   progressContainer: {
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 48,
+    justifyContent: 'center',
   },
   quickAddContainer: {
-    marginBottom: 40,
+    paddingBottom: 40,
   },
   pastDayMessage: {
     alignItems: 'center',
-    paddingVertical: 24,
-    marginBottom: 20,
+    marginTop: 16,
   },
   pastDayText: {
     fontSize: 16,
