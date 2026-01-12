@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   PanResponder,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,19 +16,17 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { RootTabParamList } from '../types';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
-import { ProgressRing } from '../components/ProgressRing';
+import { ProgressRing, ProgressRingRef } from '../components/ProgressRing';
 import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { WaterBackground } from '../components/WaterBackground';
 import { calculateProgress, getTodayDateString, isToday, isFutureDate, formatDateString } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, warningFeedback } from '../utils/haptics';
 import { loadSounds, playWaterSound } from '../utils/sounds';
-import { WeekCalendar } from '../components/WeekCalendar';
-import { CalendarIcon } from '../components/CalendarIcon';
+import { ExpandableCalendar } from '../components/ExpandableCalendar';
 import { TrophyIcon } from '../components/TrophyIcon';
 import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
-import { MonthCalendar } from '../components/MonthCalendar';
 
 export function HomeScreen() {
   const { state, addWater, clearToday } = useWater();
@@ -35,8 +34,8 @@ export function HomeScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
+  const progressRingRef = useRef<ProgressRingRef>(null);
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
-  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
 
   const { todayLog, settings, history } = state;
   const isViewingToday = isToday(selectedDate);
@@ -109,7 +108,6 @@ export function HomeScreen() {
     modalCancelText: { color: colors.textSecondary },
     modalAddButton: { backgroundColor: colors.primary },
     modalAddButtonDisabled: { backgroundColor: colors.border },
-    clearAllText: { color: colors.textSecondary },
   }), [colors]);
 
   // Load sounds on mount
@@ -170,17 +168,14 @@ export function HomeScreen() {
           <TouchableOpacity onPress={() => navigation.navigate('Awards')} style={styles.iconButton}>
             <TrophyIcon size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setCalendarModalVisible(true)} style={styles.iconButton}>
-            <CalendarIcon size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
             <GearIcon size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Week Calendar */}
-      <WeekCalendar
+      {/* Expandable Calendar */}
+      <ExpandableCalendar
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
         todayLog={todayLog}
@@ -192,20 +187,16 @@ export function HomeScreen() {
         {/* Progress Ring - Centered */}
         <View style={styles.progressContainer}>
           <ProgressRing
+            ref={progressRingRef}
             progress={progress}
             currentAmount={mlToDisplay(selectedDayData.totalMl, settings.unitSystem)}
             goalAmount={mlToDisplay(settings.dailyGoalMl, settings.unitSystem)}
             entries={isViewingToday ? todayLog.entries : []}
             goalMl={settings.dailyGoalMl}
             unitSystem={settings.unitSystem}
+            onClearAll={handleClearAll}
+            showClearAll={isViewingToday && todayLog.entries.length > 0}
           />
-          <TouchableOpacity
-            onPress={handleClearAll}
-            style={[styles.clearAllButton, { opacity: isViewingToday && todayLog.entries.length > 0 ? 1 : 0 }]}
-            disabled={!isViewingToday || todayLog.entries.length === 0}
-          >
-            <Text style={[styles.clearAllText, dynamicStyles.clearAllText]}>Clear All</Text>
-          </TouchableOpacity>
 
           {/* Past day message */}
           {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
@@ -227,18 +218,20 @@ export function HomeScreen() {
         </View>
 
         {/* Quick Add Buttons - Bottom (always rendered to maintain layout) */}
-        <View style={[styles.quickAddContainer, { opacity: isViewingToday ? 1 : 0 }]} pointerEvents={isViewingToday ? 'auto' : 'none'}>
-          <View style={styles.buttonRow}>
-            {quickAddAmounts.map(({ ml, display }) => (
-              <WaterButton
-                key={ml}
-                amount={display}
-                onPress={() => handleQuickAdd(ml)}
-              />
-            ))}
-            <CustomAmountButton onPress={() => setCustomModalVisible(true)} />
+        <TouchableWithoutFeedback onPress={() => progressRingRef.current?.clearSelection()}>
+          <View style={[styles.quickAddContainer, { opacity: isViewingToday ? 1 : 0 }]} pointerEvents={isViewingToday ? 'auto' : 'none'}>
+            <View style={styles.buttonRow}>
+              {quickAddAmounts.map(({ ml, display }) => (
+                <WaterButton
+                  key={ml}
+                  amount={display}
+                  onPress={() => handleQuickAdd(ml)}
+                />
+              ))}
+              <CustomAmountButton onPress={() => setCustomModalVisible(true)} />
+            </View>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </View>
 
       {/* Custom Amount Modal */}
@@ -288,25 +281,6 @@ export function HomeScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
-
-      {/* Calendar Modal */}
-      <Modal
-        visible={calendarModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCalendarModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <MonthCalendar
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            todayLog={todayLog}
-            history={history}
-            dailyGoalMl={settings.dailyGoalMl}
-            onClose={() => setCalendarModalVisible(false)}
-          />
         </View>
       </Modal>
 
@@ -371,15 +345,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
-  },
-  clearAllButton: {
-    marginTop: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  clearAllText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,

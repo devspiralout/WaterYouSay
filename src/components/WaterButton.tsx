@@ -8,12 +8,26 @@ interface WaterButtonProps {
 }
 
 export function WaterButton({ amount, onPress }: WaterButtonProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+
+  const translucentBg = isDark
+    ? 'rgba(255, 255, 255, 0.12)'
+    : 'rgba(255, 255, 255, 0.7)';
+  const borderColor = isDark
+    ? 'rgba(255, 255, 255, 0.15)'
+    : 'rgba(0, 0, 0, 0.06)';
+
   return (
-    <TouchableOpacity 
-      style={[styles.button, { backgroundColor: colors.surface }]} 
-      onPress={onPress} 
-      activeOpacity={0.6}
+    <TouchableOpacity
+      style={[
+        styles.button,
+        {
+          backgroundColor: translucentBg,
+          borderColor: borderColor,
+        }
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
     >
       <Text style={[styles.amount, { color: colors.text }]}>{amount}</Text>
     </TouchableOpacity>
@@ -25,12 +39,26 @@ interface CustomAmountButtonProps {
 }
 
 export function CustomAmountButton({ onPress }: CustomAmountButtonProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+
+  const translucentBg = isDark
+    ? 'rgba(255, 255, 255, 0.12)'
+    : 'rgba(255, 255, 255, 0.7)';
+  const borderColor = isDark
+    ? 'rgba(255, 255, 255, 0.15)'
+    : 'rgba(0, 0, 0, 0.06)';
+
   return (
-    <TouchableOpacity 
-      style={[styles.customButton, { backgroundColor: colors.surface }]} 
-      onPress={onPress} 
-      activeOpacity={0.6}
+    <TouchableOpacity
+      style={[
+        styles.customButton,
+        {
+          backgroundColor: translucentBg,
+          borderColor: borderColor,
+        }
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
     >
       <Text style={[styles.customText, { color: colors.primary }]}>+</Text>
     </TouchableOpacity>
@@ -41,15 +69,16 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: 14,
     paddingHorizontal: 18,
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 72,
+    borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   amount: {
     fontSize: 17,
@@ -62,11 +91,12 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   customText: {
     fontSize: 24,

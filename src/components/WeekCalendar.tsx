@@ -66,6 +66,16 @@ export function WeekCalendar({
             disabled={isFuture}
             activeOpacity={0.7}
           >
+            <Text
+              style={[
+                styles.dayLabel,
+                { color: colors.textSecondary },
+                isTodayDate && { color: colors.primary, fontWeight: '600' },
+                isFuture && { color: colors.textTertiary },
+              ]}
+            >
+              {DAY_LABELS[index]}
+            </Text>
             <View
               style={[
                 styles.dayCircle,
@@ -85,28 +95,18 @@ export function WeekCalendar({
               >
                 {date.getDate()}
               </Text>
-              {!isFuture && progress > 0 && !isSelected && (
-                <View
-                  style={[
-                    styles.progressDot,
-                    {
-                      backgroundColor: metGoal ? colors.success : colors.primary,
-                      opacity: metGoal ? 1 : 0.6,
-                    },
-                  ]}
-                />
-              )}
             </View>
-            <Text
+            <View
               style={[
-                styles.dayLabel,
-                { color: colors.textSecondary },
-                isTodayDate && { color: colors.primary, fontWeight: '600' },
-                isFuture && { color: colors.textTertiary },
+                styles.progressDot,
+                {
+                  backgroundColor: progress > 0
+                    ? (metGoal ? colors.success : colors.primary)
+                    : colors.textTertiary,
+                  opacity: isFuture ? 0 : (progress > 0 ? (metGoal ? 1 : 0.6) : 0.8),
+                },
               ]}
-            >
-              {DAY_LABELS[index]}
-            </Text>
+            />
           </TouchableOpacity>
         );
       })}
@@ -123,7 +123,6 @@ const styles = StyleSheet.create({
   },
   dayContainer: {
     alignItems: 'center',
-    gap: 6,
   },
   dayCircle: {
     width: 40,
@@ -139,12 +138,12 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontSize: 11,
     fontWeight: '500',
+    marginBottom: 6,
   },
   progressDot: {
-    position: 'absolute',
-    bottom: 4,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 1.5,
+    marginTop: 5,
   },
 });

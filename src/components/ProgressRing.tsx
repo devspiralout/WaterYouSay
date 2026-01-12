@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../context/ThemeContext';
@@ -15,6 +15,12 @@ interface ProgressRingProps {
   entries?: WaterEntry[];
   goalMl?: number;
   unitSystem?: 'metric' | 'imperial';
+  onClearAll?: () => void;
+  showClearAll?: boolean;
+}
+
+export interface ProgressRingRef {
+  clearSelection: () => void;
 }
 
 interface SelectedSegment {
@@ -22,7 +28,7 @@ interface SelectedSegment {
   index: number;
 }
 
-export function ProgressRing({
+export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   progress,
   size = 280,
   strokeWidth = 12,
@@ -31,12 +37,18 @@ export function ProgressRing({
   entries = [],
   goalMl = 2500,
   unitSystem = 'metric',
-}: ProgressRingProps) {
+  onClearAll,
+  showClearAll = false,
+}, ref) => {
   const { colors } = useTheme();
   const [selectedSegment, setSelectedSegment] = useState<SelectedSegment | null>(null);
   const [animatedProgress, setAnimatedProgress] = useState(progress);
   const animationRef = useRef(new Animated.Value(progress)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  // Expose clearSelection method to parent
+  useImperativeHandle(ref, () => ({
+    clearSelection: () => setSelectedSegment(null),
+  }));
 
   const expandedStrokeWidth = strokeWidth + 6;
   const padding = (expandedStrokeWidth - strokeWidth) / 2; // Extra space for expanded segments
@@ -62,15 +74,11 @@ export function ProgressRing({
     };
   }, [progress, animationRef]);
 
-  // Animate selection
+
+  // Clear selection when entries change (e.g., swiping to different day)
   useEffect(() => {
-    Animated.spring(scaleAnim, {
-      toValue: selectedSegment ? 1.02 : 1,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 20,
-    }).start();
-  }, [selectedSegment, scaleAnim]);
+    setSelectedSegment(null);
+  }, [entries]);
 
   // Check if goal is met (use threshold for floating point precision)
   const goalMet = animatedProgress >= 99.9;
@@ -149,13 +157,6 @@ export function ProgressRing({
         entry: segment.entry,
         index: segment.index,
       });
-
-      // Auto-deselect after 4 seconds
-      setTimeout(() => {
-        setSelectedSegment((current) =>
-          current?.index === segment.index ? null : current
-        );
-      }, 4000);
     }
   };
 
@@ -196,7 +197,7 @@ export function ProgressRing({
       activeOpacity={1}
       onPress={handleContainerPress}
     >
-      <Animated.View style={[styles.svgContainer, { width: svgSize, height: svgSize, transform: [{ scale: scaleAnim }] }]}>
+      <View style={[styles.svgContainer, { width: svgSize, height: svgSize }]}>
         <Svg width={svgSize} height={svgSize}>
           {/* Background circle */}
           <Circle
@@ -253,10 +254,10 @@ export function ProgressRing({
             />
           )}
         </Svg>
-      </Animated.View>
+      </View>
 
       <View style={[styles.textContainer, { width: svgSize, height: svgSize }]}>
-        <Animated.View style={[styles.centerContent, { transform: [{ scale: scaleAnim }] }]}>
+        <View style={styles.centerContent}>
           <Text
             style={[
               styles.currentAmount,
@@ -279,11 +280,20 @@ export function ProgressRing({
           >
             {centerContent.detail || 'no entries'}
           </Text>
-        </Animated.View>
+          {showClearAll && onClearAll && !selectedSegment && (
+            <TouchableOpacity
+              onPress={onClearAll}
+              style={styles.clearAllButton}
+              hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
+            >
+              <Text style={[styles.clearAllText, { color: colors.textTertiary }]}>Clear All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -327,5 +337,14 @@ const styles = StyleSheet.create({
   entryCount: {
     fontSize: 13,
     marginTop: 8,
+  },
+  clearAllButton: {
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  clearAllText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
