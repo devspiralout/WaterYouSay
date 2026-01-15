@@ -29,7 +29,7 @@ import { GearIcon } from '../components/GearIcon';
 import { WeatherAnimation } from '../components/WeatherAnimation';
 
 export function HomeScreen() {
-  const { state, addWater, climateAdjustment } = useWater();
+  const { state, addWater, climateAdjustment, isAtDailyLimit } = useWater();
   const { colors } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
@@ -238,16 +238,27 @@ export function HomeScreen() {
                 )}
               </TouchableOpacity>
             )}
-            <View style={styles.buttonRow}>
-              {quickAddAmounts.map(({ ml, display }) => (
-                <WaterButton
-                  key={ml}
-                  amount={display}
-                  onPress={() => handleQuickAdd(ml)}
-                />
-              ))}
-              <CustomAmountButton onPress={() => setCustomModalVisible(true)} />
-            </View>
+            {isAtDailyLimit ? (
+              <View style={styles.limitReachedContainer}>
+                <Text style={[styles.limitReachedText, { color: colors.textSecondary }]}>
+                  Daily limit reached (150%)
+                </Text>
+                <Text style={[styles.limitReachedSubtext, { color: colors.textTertiary }]}>
+                  Great job staying hydrated!
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.buttonRow}>
+                {quickAddAmounts.map(({ ml, display }) => (
+                  <WaterButton
+                    key={ml}
+                    amount={display}
+                    onPress={() => handleQuickAdd(ml)}
+                  />
+                ))}
+                <CustomAmountButton onPress={() => setCustomModalVisible(true)} />
+              </View>
+            )}
           </View>
         </TouchableWithoutFeedback>
         )}
@@ -496,6 +507,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
+  },
+  limitReachedContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  limitReachedText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  limitReachedSubtext: {
+    fontSize: 14,
+    fontWeight: '400',
+    marginTop: 4,
   },
   modalOverlay: {
     flex: 1,

@@ -367,10 +367,24 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     }
   }, [state.settings.climate.enabled, state.settings.dailyGoalMl]);
 
+  // Calculate max allowed intake (150% of effective goal)
+  const effectiveGoal = climateAdjustment?.adjustedGoalMl ?? state.settings.dailyGoalMl;
+  const maxDailyIntake = Math.round(effectiveGoal * 1.5);
+
   const contextValue: WaterContextType = {
     state,
     addWater: (amountMl: number) => {
-      dispatch({ type: 'ADD_WATER', payload: { amountMl } });
+      const currentTotal = state.todayLog.totalMl;
+      const remainingAllowed = maxDailyIntake - currentTotal;
+
+      if (remainingAllowed <= 0) {
+        // Already at limit, don't add
+        return;
+      }
+
+      // Cap the amount if it would exceed the limit
+      const actualAmount = Math.min(amountMl, remainingAllowed);
+      dispatch({ type: 'ADD_WATER', payload: { amountMl: actualAmount } });
     },
     removeEntry: (entryId: string) => {
       dispatch({ type: 'REMOVE_ENTRY', payload: { entryId } });
@@ -427,6 +441,8 @@ export function WaterProvider({ children }: { children: ReactNode }) {
 
       dispatch({ type: 'LOAD_MOCK_DATA', payload: { todayLog, history } });
     },
+    dailyLimitMl: maxDailyIntake,
+    isAtDailyLimit: state.todayLog.totalMl >= maxDailyIntake,
   };
 
   return (

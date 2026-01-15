@@ -127,4 +127,6 @@ export interface WaterContextType {
   pendingAchievement: AchievementId | null;
   clearPendingAchievement: () => void;
   loadMockData: (todayEntries: number, historyDays: number) => Promise<void>;
+  dailyLimitMl: number;
+  isAtDailyLimit: boolean;
 }

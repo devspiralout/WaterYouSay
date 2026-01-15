@@ -79,7 +79,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   // Check if goal is met (use threshold for floating point precision)
   const goalMet = animatedProgress >= 99.9;
 
-  // Gap between segments in degrees (1px approximate)
+  // Gap between segments in degrees - more visible gap
   const gapDegrees = entries.length > 1 ? 1 : 0;
 
   // Calculate segments with animated progress
@@ -90,11 +90,19 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     if (totalMl === 0) return [];
 
     // Maximum angle is based on animated progress (max 360)
+    // When over 100%, segments scale to fit within the ring
     const maxAngle = Math.min((animatedProgress / 100) * 360, 360);
-    const totalGapAngle = gapDegrees * (entries.length - 1);
+
+    // When ring is full (or nearly full), add gap between last and first segment too
+    const isRingFull = maxAngle >= 359;
+    const numGaps = isRingFull ? entries.length : entries.length - 1;
+    const totalGapAngle = gapDegrees * numGaps;
     const availableAngle = Math.max(maxAngle - totalGapAngle, 0);
 
-    let currentAngle = -90; // Start at top (12 o'clock)
+    let currentAngle = -90 + (isRingFull ? gapDegrees / 2 : 0); // Offset start if ring is full
+
+    // Base color - green when goal met, blue otherwise
+    const baseColor = goalMet ? colors.success : colors.primary;
 
     return entries.map((entry, index) => {
       const proportion = entry.amountMl / totalMl;
@@ -103,14 +111,11 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
       const startAngle = currentAngle;
       currentAngle = currentAngle + sweepAngle + gapDegrees;
 
-      // Single color - primary blue (or success green when goal met)
-      const segmentColor = goalMet ? colors.success : colors.primary;
-
       return {
         entry,
         startAngle,
         sweepAngle,
-        color: segmentColor,
+        color: baseColor,
         index,
       };
     });
