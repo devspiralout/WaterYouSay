@@ -186,22 +186,18 @@ export function HomeScreen() {
             unitSystem={settings.unitSystem}
           />
 
-          {/* Past day message - absolutely positioned so it doesn't affect ring centering */}
+          {/* Past day message - sits under the ring */}
           {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
-            <View style={styles.dayMessageContainer}>
-              <Text style={[styles.pastDayText, { color: colors.textSecondary }]}>
-                You drank {mlToDisplay(selectedDayData.totalMl, settings.unitSystem)} this day
-              </Text>
-            </View>
+            <Text style={[styles.pastDayText, { color: colors.textSecondary, marginTop: 20 }]}>
+              You drank {mlToDisplay(selectedDayData.totalMl, settings.unitSystem)} this day
+            </Text>
           )}
 
           {/* Future day message */}
           {isViewingFuture && (
-            <View style={styles.dayMessageContainer}>
-              <Text style={[styles.pastDayText, { color: colors.textTertiary }]}>
-                Future date
-              </Text>
-            </View>
+            <Text style={[styles.pastDayText, { color: colors.textTertiary, marginTop: 20 }]}>
+              Future date
+            </Text>
           )}
         </View>
 
@@ -416,7 +412,10 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 8,
+  },
+  progressContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -439,11 +438,6 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 8,
-  },
-  progressContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   quickAddContainer: {
     paddingBottom: 24,
@@ -491,13 +485,6 @@ const styles = StyleSheet.create({
   weatherBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  dayMessageContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
   },
   pastDayText: {
     fontSize: 16,
