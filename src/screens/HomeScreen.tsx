@@ -20,18 +20,20 @@ import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { WaterBackground } from '../components/WaterBackground';
 import { calculateProgress, getTodayDateString, isToday, isFutureDate, formatDateString } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
-import { mediumTap } from '../utils/haptics';
+import { mediumTap, lightTap } from '../utils/haptics';
 import { loadSounds, playWaterSound } from '../utils/sounds';
 import { ExpandableCalendar } from '../components/ExpandableCalendar';
 import { TrophyIcon } from '../components/TrophyIcon';
 import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
+import { WeatherAnimation } from '../components/WeatherAnimation';
 
 export function HomeScreen() {
   const { state, addWater, climateAdjustment } = useWater();
   const { colors } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [weatherModalVisible, setWeatherModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const progressRingRef = useRef<ProgressRingRef>(null);
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
@@ -184,9 +186,9 @@ export function HomeScreen() {
             unitSystem={settings.unitSystem}
           />
 
-          {/* Past day message */}
+          {/* Past day message - absolutely positioned so it doesn't affect ring centering */}
           {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
-            <View style={[styles.pastDayMessage, { bottom: calendarExpanded ? -60 : 20 }]}>
+            <View style={styles.dayMessageContainer}>
               <Text style={[styles.pastDayText, { color: colors.textSecondary }]}>
                 You drank {mlToDisplay(selectedDayData.totalMl, settings.unitSystem)} this day
               </Text>
@@ -195,7 +197,7 @@ export function HomeScreen() {
 
           {/* Future day message */}
           {isViewingFuture && (
-            <View style={[styles.pastDayMessage, { bottom: calendarExpanded ? -60 : 20 }]}>
+            <View style={styles.dayMessageContainer}>
               <Text style={[styles.pastDayText, { color: colors.textTertiary }]}>
                 Future date
               </Text>
@@ -203,9 +205,43 @@ export function HomeScreen() {
           )}
         </View>
 
-        {/* Quick Add Buttons - Bottom (always rendered to maintain layout) */}
-        <TouchableWithoutFeedback onPress={() => progressRingRef.current?.clearSelection()}>
-          <View style={[styles.quickAddContainer, { opacity: isViewingToday && !calendarExpanded ? 1 : 0 }]} pointerEvents={isViewingToday && !calendarExpanded ? 'auto' : 'none'}>
+        {/* Weather Widget & Quick Add Buttons - Bottom (only on today) */}
+        {isViewingToday && (
+          <TouchableWithoutFeedback onPress={() => progressRingRef.current?.clearSelection()}>
+            <View style={[styles.quickAddContainer, { opacity: !calendarExpanded ? 1 : 0 }]} pointerEvents={!calendarExpanded ? 'auto' : 'none'}>
+            {/* Weather Widget */}
+            {climateAdjustment && (
+              <TouchableOpacity
+                style={[styles.weatherWidget, { backgroundColor: colors.surface }]}
+                onPress={() => {
+                  lightTap();
+                  setWeatherModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <WeatherAnimation temperature={climateAdjustment.temperature} size={36} />
+                <View style={styles.weatherContent}>
+                  <View style={styles.weatherTempRow}>
+                    <Text style={[styles.weatherTemp, { color: colors.text }]}>
+                      {climateAdjustment.temperature}°
+                    </Text>
+                    <Text style={[styles.weatherHighLow, { color: colors.textSecondary }]}>
+                      H:{climateAdjustment.temperatureHigh}° L:{climateAdjustment.temperatureLow}°
+                    </Text>
+                  </View>
+                  <Text style={[styles.weatherLocation, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {climateAdjustment.locationName}
+                  </Text>
+                </View>
+                {climateAdjustment.percentage > 0 && (
+                  <View style={[styles.weatherBadge, { backgroundColor: colors.primary + '20' }]}>
+                    <Text style={[styles.weatherBadgeText, { color: colors.primary }]}>
+                      +{climateAdjustment.percentage}%
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
             <View style={styles.buttonRow}>
               {quickAddAmounts.map(({ ml, display }) => (
                 <WaterButton
@@ -218,6 +254,10 @@ export function HomeScreen() {
             </View>
           </View>
         </TouchableWithoutFeedback>
+        )}
+
+        {/* Spacer for past/future days to match today's button area height */}
+        {!isViewingToday && <View style={styles.bottomSpacer} />}
       </View>
 
       {/* Custom Amount Modal */}
@@ -270,6 +310,101 @@ export function HomeScreen() {
         </View>
       </Modal>
 
+      {/* Weather Details Modal */}
+      <Modal
+        visible={weatherModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setWeatherModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setWeatherModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.weatherModalContent, dynamicStyles.modalContent]}>
+                {climateAdjustment && (
+                  <>
+                    <View style={styles.weatherModalHeader}>
+                      <WeatherAnimation temperature={climateAdjustment.temperature} size={56} />
+                      <View style={styles.weatherModalHeaderText}>
+                        <Text style={[styles.weatherModalTemp, { color: colors.text }]}>
+                          {climateAdjustment.temperature}°C
+                        </Text>
+                        <Text style={[styles.weatherModalLocation, { color: colors.textSecondary }]}>
+                          {climateAdjustment.locationName}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.weatherModalDivider, { backgroundColor: colors.border }]} />
+
+                    <View style={styles.weatherModalSection}>
+                      <Text style={[styles.weatherModalLabel, { color: colors.textSecondary }]}>
+                        Today's Range
+                      </Text>
+                      <Text style={[styles.weatherModalValue, { color: colors.text }]}>
+                        {climateAdjustment.temperatureLow}° — {climateAdjustment.temperatureHigh}°
+                      </Text>
+                    </View>
+
+                    <View style={[styles.weatherModalDivider, { backgroundColor: colors.border }]} />
+
+                    <View style={styles.weatherModalSection}>
+                      <Text style={[styles.weatherModalLabel, { color: colors.textSecondary }]}>
+                        Hydration Impact
+                      </Text>
+                      {climateAdjustment.percentage > 0 ? (
+                        <>
+                          <Text style={[styles.weatherModalValue, { color: colors.primary }]}>
+                            +{climateAdjustment.percentage}% increase recommended
+                          </Text>
+                          <Text style={[styles.weatherModalReason, { color: colors.textSecondary }]}>
+                            {climateAdjustment.reason}
+                          </Text>
+                        </>
+                      ) : (
+                        <Text style={[styles.weatherModalValue, { color: colors.success }]}>
+                          No adjustment needed
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={[styles.weatherModalDivider, { backgroundColor: colors.border }]} />
+
+                    <View style={styles.weatherModalSection}>
+                      <Text style={[styles.weatherModalLabel, { color: colors.textSecondary }]}>
+                        Your Goal Today
+                      </Text>
+                      <View style={styles.weatherModalGoalRow}>
+                        <Text style={[styles.weatherModalGoalBase, { color: colors.textSecondary }]}>
+                          {mlToDisplay(settings.dailyGoalMl, settings.unitSystem)} base
+                        </Text>
+                        {climateAdjustment.percentage > 0 && (
+                          <>
+                            <Text style={[styles.weatherModalGoalArrow, { color: colors.textTertiary }]}>
+                              →
+                            </Text>
+                            <Text style={[styles.weatherModalGoalAdjusted, { color: colors.primary }]}>
+                              {mlToDisplay(climateAdjustment.adjustedGoalMl, settings.unitSystem)}
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.weatherModalClose, { backgroundColor: colors.primary }]}
+                      onPress={() => setWeatherModalVisible(false)}
+                    >
+                      <Text style={styles.weatherModalCloseText}>Got it</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -280,8 +415,8 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
+    paddingTop: 8,
   },
   header: {
     flexDirection: 'row',
@@ -309,13 +444,57 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
   },
   quickAddContainer: {
-    paddingBottom: 40,
+    paddingBottom: 24,
+    minHeight: 160,
+    justifyContent: 'flex-end',
   },
-  pastDayMessage: {
+  bottomSpacer: {
+    height: 160,
+  },
+  weatherWidget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginBottom: 16,
+    gap: 12,
+  },
+  weatherContent: {
+    flex: 1,
+  },
+  weatherTempRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  weatherTemp: {
+    fontSize: 22,
+    fontWeight: '600',
+  },
+  weatherHighLow: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  weatherLocation: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  weatherBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  weatherBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dayMessageContainer: {
     position: 'absolute',
+    bottom: 20,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -395,6 +574,79 @@ const styles = StyleSheet.create({
     // Handled by dynamic styles
   },
   modalAddText: {
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  weatherModalContent: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  weatherModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 8,
+  },
+  weatherModalHeaderText: {
+    flex: 1,
+  },
+  weatherModalTemp: {
+    fontSize: 32,
+    fontWeight: '600',
+  },
+  weatherModalLocation: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  weatherModalDivider: {
+    height: 1,
+    marginVertical: 16,
+  },
+  weatherModalSection: {
+    gap: 4,
+  },
+  weatherModalLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  weatherModalValue: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  weatherModalReason: {
+    fontSize: 14,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  weatherModalGoalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  weatherModalGoalBase: {
+    fontSize: 17,
+    fontWeight: '500',
+  },
+  weatherModalGoalArrow: {
+    fontSize: 16,
+  },
+  weatherModalGoalAdjusted: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  weatherModalClose: {
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  weatherModalCloseText: {
     fontSize: 17,
     color: '#FFFFFF',
     fontWeight: '600',

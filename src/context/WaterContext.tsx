@@ -348,6 +348,9 @@ export function WaterProvider({ children }: { children: ReactNode }) {
         percentage: adjustment.percentage,
         reason: adjustment.reason,
         temperature: adjustment.temperature,
+        temperatureHigh: weather.temperatureHigh,
+        temperatureLow: weather.temperatureLow,
+        locationName: weather.locationName,
         adjustedGoalMl: adjustedGoal,
       });
     } else {

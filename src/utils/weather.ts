@@ -6,8 +6,10 @@ const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 export interface WeatherData {
   temperature: number; // Celsius
+  temperatureHigh: number; // Daily high
+  temperatureLow: number; // Daily low
   humidity: number; // Percentage
-  location: string;
+  locationName: string; // City/area name
   timestamp: number;
 }
 
@@ -47,6 +49,20 @@ export async function getLocation(): Promise<{ latitude: number; longitude: numb
   }
 }
 
+async function getLocationName(latitude: number, longitude: number): Promise<string> {
+  try {
+    const results = await Location.reverseGeocodeAsync({ latitude, longitude });
+    if (results.length > 0) {
+      const { city, subregion, region } = results[0];
+      // Prefer city, fall back to subregion or region
+      return city || subregion || region || 'Unknown location';
+    }
+  } catch (error) {
+    console.error('Error reverse geocoding:', error);
+  }
+  return 'Unknown location';
+}
+
 export async function fetchWeather(): Promise<WeatherData | null> {
   // Check cache first
   const cached = await getCachedWeather();
@@ -60,7 +76,8 @@ export async function fetchWeather(): Promise<WeatherData | null> {
   }
 
   try {
-    const url = `${API_BASE}?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m`;
+    // Fetch current weather and daily high/low
+    const url = `${API_BASE}?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -70,10 +87,15 @@ export async function fetchWeather(): Promise<WeatherData | null> {
 
     const data = await response.json();
 
+    // Get location name via reverse geocoding
+    const locationName = await getLocationName(location.latitude, location.longitude);
+
     const weatherData: WeatherData = {
       temperature: Math.round(data.current.temperature_2m),
+      temperatureHigh: Math.round(data.daily.temperature_2m_max[0]),
+      temperatureLow: Math.round(data.daily.temperature_2m_min[0]),
       humidity: data.current.relative_humidity_2m,
-      location: `${location.latitude.toFixed(2)}, ${location.longitude.toFixed(2)}`,
+      locationName,
       timestamp: Date.now(),
     };
 

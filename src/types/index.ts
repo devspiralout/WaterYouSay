@@ -100,6 +100,9 @@ export interface ClimateAdjustmentInfo {
   percentage: number;
   reason: string;
   temperature: number;
+  temperatureHigh: number;
+  temperatureLow: number;
+  locationName: string;
   adjustedGoalMl: number;
 }
 
