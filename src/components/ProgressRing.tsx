@@ -99,36 +99,26 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
 
   // Calculate segments with animated progress
   const segments = useMemo(() => {
+    // If goal is met, we show a solid green ring instead of segments
+    if (goalMet) return [];
+
     if (entries.length === 0) return [];
 
     const totalMl = entries.reduce((sum, e) => sum + e.amountMl, 0);
     if (totalMl === 0) return [];
 
-    // Check if we're over the goal
-    const isOverGoal = totalMl > goalMl;
-
-    // When over goal, scale segments to fit within 360
-    // When under goal, each segment is sized by its absolute ml contribution to goal
-    const scaleFactor = isOverGoal ? goalMl / totalMl : 1;
-
-    // Determine if ring will be full (at or over 100%)
-    const isRingFull = isOverGoal || totalMl >= goalMl * 0.999;
-    const numGaps = isRingFull ? entries.length : Math.max(0, entries.length - 1);
+    // Calculate total angle used (capped at 360)
+    const totalAngle = Math.min((totalMl / goalMl) * 360, 360);
+    const numGaps = Math.max(0, entries.length - 1);
     const totalGapAngle = gapDegrees * numGaps;
+    const availableAngle = totalAngle - totalGapAngle;
 
-    let currentAngle = -90 + (isRingFull ? gapDegrees / 2 : 0);
-
-    // Base color - green when goal met, blue otherwise
-    const baseColor = goalMet ? colors.success : colors.primary;
+    let currentAngle = -90;
 
     return entries.map((entry, index) => {
-      // Each segment sized by its absolute contribution to goal
-      // Scale down proportionally only when over 100%
-      const baseAngle = (entry.amountMl / goalMl) * 360;
-
-      // Account for gaps proportionally
-      const gapAdjustment = isRingFull ? (1 - totalGapAngle / 360) : 1;
-      const sweepAngle = baseAngle * scaleFactor * gapAdjustment;
+      // Each segment sized by its proportion of total intake
+      const proportion = entry.amountMl / totalMl;
+      const sweepAngle = proportion * availableAngle;
 
       const startAngle = currentAngle;
       currentAngle = currentAngle + sweepAngle + gapDegrees;
@@ -137,7 +127,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
         entry,
         startAngle,
         sweepAngle,
-        color: baseColor,
+        color: colors.primary,
         index,
       };
     });
@@ -302,12 +292,19 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
         detail: `Entry ${selectedSegment.index + 1} of ${entries.length}`,
       };
     }
+    if (goalMet) {
+      return {
+        main: currentAmount,
+        sub: 'Goal reached!',
+        detail: 'Great job staying hydrated',
+      };
+    }
     return {
       main: currentAmount,
       sub: `of ${goalAmount}`,
       detail: entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : '',
     };
-  }, [selectedSegment, currentAmount, goalAmount, entries.length, unitSystem]);
+  }, [selectedSegment, currentAmount, goalAmount, entries.length, unitSystem, goalMet]);
 
   return (
     <TouchableOpacity
@@ -410,11 +407,22 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
             );
           })()}
 
-          {/* If no entries but has progress, show single arc */}
-          {entries.length === 0 && animatedProgress > 0 && (
+          {/* Goal met - show solid green ring */}
+          {goalMet && (
+            <Path
+              d={createArcPath(-90, 359.9, radius)}
+              stroke={colors.success}
+              strokeWidth={strokeWidth}
+              strokeLinecap="butt"
+              fill="none"
+            />
+          )}
+
+          {/* If no entries but has progress (and goal not met), show single arc */}
+          {!goalMet && entries.length === 0 && animatedProgress > 0 && (
             <Path
               d={createArcPath(-90, (animatedProgress / 100) * 360, radius)}
-              stroke={goalMet ? colors.success : colors.primary}
+              stroke={colors.primary}
               strokeWidth={strokeWidth}
               strokeLinecap="butt"
               fill="none"
@@ -428,21 +436,21 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
           <Text
             style={[
               styles.currentAmount,
-              { color: selectedSegment ? colors.primary : colors.text },
+              { color: selectedSegment ? colors.primary : goalMet ? colors.success : colors.text },
               selectedSegment && styles.selectedAmount,
             ]}
           >
             {centerContent.main}
           </Text>
           <View style={styles.goalContainer}>
-            <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>
+            <Text style={[styles.goalAmount, { color: goalMet ? colors.success : colors.textSecondary }]}>
               {centerContent.sub}
             </Text>
           </View>
           <Text
             style={[
               styles.entryCount,
-              { color: centerContent.detail ? colors.textTertiary : 'transparent' }
+              { color: centerContent.detail ? (goalMet ? colors.success : colors.textTertiary) : 'transparent' }
             ]}
           >
             {centerContent.detail || 'no entries'}

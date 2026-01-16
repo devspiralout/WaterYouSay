@@ -5,9 +5,10 @@ import { useTheme } from '../context/ThemeContext';
 interface WaterButtonProps {
   amount: string;
   onPress: () => void;
+  disabled?: boolean;
 }
 
-export function WaterButton({ amount, onPress }: WaterButtonProps) {
+export function WaterButton({ amount, onPress, disabled }: WaterButtonProps) {
   const { colors, isDark } = useTheme();
 
   const translucentBg = isDark
@@ -24,10 +25,12 @@ export function WaterButton({ amount, onPress }: WaterButtonProps) {
         {
           backgroundColor: translucentBg,
           borderColor: borderColor,
+          opacity: disabled ? 0.4 : 1,
         }
       ]}
       onPress={onPress}
       activeOpacity={0.7}
+      disabled={disabled}
     >
       <Text style={[styles.amount, { color: colors.text }]}>{amount}</Text>
     </TouchableOpacity>
@@ -36,9 +39,10 @@ export function WaterButton({ amount, onPress }: WaterButtonProps) {
 
 interface CustomAmountButtonProps {
   onPress: () => void;
+  disabled?: boolean;
 }
 
-export function CustomAmountButton({ onPress }: CustomAmountButtonProps) {
+export function CustomAmountButton({ onPress, disabled }: CustomAmountButtonProps) {
   const { colors, isDark } = useTheme();
 
   const translucentBg = isDark
@@ -55,10 +59,12 @@ export function CustomAmountButton({ onPress }: CustomAmountButtonProps) {
         {
           backgroundColor: translucentBg,
           borderColor: borderColor,
+          opacity: disabled ? 0.4 : 1,
         }
       ]}
       onPress={onPress}
       activeOpacity={0.7}
+      disabled={disabled}
     >
       <Text style={[styles.customText, { color: colors.primary }]}>+</Text>
     </TouchableOpacity>
