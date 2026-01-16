@@ -29,7 +29,7 @@ import { GearIcon } from '../components/GearIcon';
 import { WeatherAnimation } from '../components/WeatherAnimation';
 
 export function HomeScreen() {
-  const { state, addWater, climateAdjustment, isAtDailyLimit } = useWater();
+  const { state, addWater, removeEntry, climateAdjustment, isAtDailyLimit } = useWater();
   const { colors } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
@@ -184,6 +184,7 @@ export function HomeScreen() {
             entries={isViewingToday ? todayLog.entries : []}
             goalMl={effectiveGoalMl}
             unitSystem={settings.unitSystem}
+            onDeleteEntry={isViewingToday ? removeEntry : undefined}
           />
 
           {/* Past day message - sits under the ring */}

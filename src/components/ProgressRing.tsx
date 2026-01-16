@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useMemo, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../context/ThemeContext';
 import { WaterEntry } from '../types';
 import { mlToDisplay } from '../utils/units';
-import { lightTap } from '../utils/haptics';
+import { lightTap, warningFeedback } from '../utils/haptics';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 interface ProgressRingProps {
   progress: number;
@@ -15,6 +17,7 @@ interface ProgressRingProps {
   entries?: WaterEntry[];
   goalMl?: number;
   unitSystem?: 'metric' | 'imperial';
+  onDeleteEntry?: (entryId: string) => void;
 }
 
 export interface ProgressRingRef {
@@ -35,11 +38,22 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   entries = [],
   goalMl = 2500,
   unitSystem = 'metric',
+  onDeleteEntry,
 }, ref) => {
   const { colors } = useTheme();
   const [selectedSegment, setSelectedSegment] = useState<SelectedSegment | null>(null);
   const [animatedProgress, setAnimatedProgress] = useState(progress);
   const animationRef = useRef(new Animated.Value(progress)).current;
+
+  // Delete animation state
+  const [deletingSegmentId, setDeletingSegmentId] = useState<string | null>(null);
+  const [justDeletedId, setJustDeletedId] = useState<string | null>(null);
+  const deleteAnimProgress = useRef(new Animated.Value(0)).current;
+
+  // Track previous segment positions for slide animation
+  const [prevSegmentPositions, setPrevSegmentPositions] = useState<Map<string, { start: number; sweep: number }>>(new Map());
+  const slideAnimProgress = useRef(new Animated.Value(1)).current;
+  const [slideProgress, setSlideProgress] = useState(1); // 0 = old positions, 1 = new positions
 
   // Expose clearSelection method to parent
   useImperativeHandle(ref, () => ({
@@ -71,9 +85,10 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   }, [progress, animationRef]);
 
 
-  // Clear selection when entries change (e.g., swiping to different day)
+  // Clear selection and justDeletedId when entries change
   useEffect(() => {
     setSelectedSegment(null);
+    setJustDeletedId(null);
   }, [entries]);
 
   // Check if goal is met (use threshold for floating point precision)
@@ -89,24 +104,31 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     const totalMl = entries.reduce((sum, e) => sum + e.amountMl, 0);
     if (totalMl === 0) return [];
 
-    // Maximum angle is based on animated progress (max 360)
-    // When over 100%, segments scale to fit within the ring
-    const maxAngle = Math.min((animatedProgress / 100) * 360, 360);
+    // Check if we're over the goal
+    const isOverGoal = totalMl > goalMl;
 
-    // When ring is full (or nearly full), add gap between last and first segment too
-    const isRingFull = maxAngle >= 359;
-    const numGaps = isRingFull ? entries.length : entries.length - 1;
+    // When over goal, scale segments to fit within 360
+    // When under goal, each segment is sized by its absolute ml contribution to goal
+    const scaleFactor = isOverGoal ? goalMl / totalMl : 1;
+
+    // Determine if ring will be full (at or over 100%)
+    const isRingFull = isOverGoal || totalMl >= goalMl * 0.999;
+    const numGaps = isRingFull ? entries.length : Math.max(0, entries.length - 1);
     const totalGapAngle = gapDegrees * numGaps;
-    const availableAngle = Math.max(maxAngle - totalGapAngle, 0);
 
-    let currentAngle = -90 + (isRingFull ? gapDegrees / 2 : 0); // Offset start if ring is full
+    let currentAngle = -90 + (isRingFull ? gapDegrees / 2 : 0);
 
     // Base color - green when goal met, blue otherwise
     const baseColor = goalMet ? colors.success : colors.primary;
 
     return entries.map((entry, index) => {
-      const proportion = entry.amountMl / totalMl;
-      const sweepAngle = proportion * availableAngle;
+      // Each segment sized by its absolute contribution to goal
+      // Scale down proportionally only when over 100%
+      const baseAngle = (entry.amountMl / goalMl) * 360;
+
+      // Account for gaps proportionally
+      const gapAdjustment = isRingFull ? (1 - totalGapAngle / 360) : 1;
+      const sweepAngle = baseAngle * scaleFactor * gapAdjustment;
 
       const startAngle = currentAngle;
       currentAngle = currentAngle + sweepAngle + gapDegrees;
@@ -119,7 +141,60 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
         index,
       };
     });
-  }, [entries, animatedProgress, colors, gapDegrees, goalMet]);
+  }, [entries, goalMl, colors, gapDegrees, goalMet]);
+
+  // Trigger slide animation when segments change (after deletion)
+  useEffect(() => {
+    if (prevSegmentPositions.size > 0 && !deletingSegmentId) {
+      // Check if any segment moved (not just added)
+      const hasMovement = segments.some(seg => {
+        const prev = prevSegmentPositions.get(seg.entry.id);
+        return prev && Math.abs(prev.start - seg.startAngle) > 0.1;
+      });
+
+      if (hasMovement) {
+        slideAnimProgress.setValue(0);
+        setSlideProgress(0);
+
+        const listener = slideAnimProgress.addListener(({ value }) => {
+          setSlideProgress(value);
+        });
+
+        Animated.timing(slideAnimProgress, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }).start(() => {
+          slideAnimProgress.removeListener(listener);
+          setSlideProgress(1);
+        });
+      }
+    }
+
+    // Store current positions for next change
+    const newPositions = new Map<string, { start: number; sweep: number }>();
+    segments.forEach(seg => {
+      newPositions.set(seg.entry.id, { start: seg.startAngle, sweep: seg.sweepAngle });
+    });
+    setPrevSegmentPositions(newPositions);
+  }, [segments, deletingSegmentId]);
+
+  // Get interpolated position for a segment (for slide animation)
+  const getInterpolatedPosition = useCallback((segment: typeof segments[0]) => {
+    const prev = prevSegmentPositions.get(segment.entry.id);
+
+    // If no previous position or animation complete, use current position
+    if (!prev || slideProgress >= 1) {
+      return { startAngle: segment.startAngle, sweepAngle: segment.sweepAngle };
+    }
+
+    // Interpolate from previous to current position
+    const startAngle = prev.start + (segment.startAngle - prev.start) * slideProgress;
+    const sweepAngle = prev.sweep + (segment.sweepAngle - prev.sweep) * slideProgress;
+
+    return { startAngle, sweepAngle };
+  }, [prevSegmentPositions, slideProgress]);
 
   // Convert angle to SVG arc path
   const createArcPath = (startAngle: number, sweepAngle: number, arcRadius: number) => {
@@ -149,6 +224,9 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   };
 
   const handleSegmentPress = (segment: typeof segments[0]) => {
+    // Don't allow interaction while deleting
+    if (deletingSegmentId) return;
+
     lightTap();
     if (selectedSegment?.index === segment.index) {
       // Deselect if tapping same segment
@@ -160,6 +238,45 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
       });
     }
   };
+
+  const handleSegmentLongPress = useCallback((segment: typeof segments[0]) => {
+    // Only allow deletion if handler is provided and not already deleting
+    if (!onDeleteEntry || deletingSegmentId) return;
+
+    warningFeedback();
+    setDeletingSegmentId(segment.entry.id);
+    setSelectedSegment(null);
+
+    // Reset animation value for new delete
+    deleteAnimProgress.setValue(0);
+
+    // Animate: grow, then pop off, then pause to show empty space
+    Animated.sequence([
+      // Grow phase - segment expands
+      Animated.timing(deleteAnimProgress, {
+        toValue: 0.3,
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      // Pop off phase - segment flies out and fades
+      Animated.timing(deleteAnimProgress, {
+        toValue: 1,
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      // Pause to show empty space
+      Animated.delay(250),
+    ]).start(() => {
+      // Mark as just deleted to prevent ghost rendering
+      setJustDeletedId(segment.entry.id);
+      // Clear deleting state first (keeps opacity at 0 since we don't reset deleteAnimProgress)
+      setDeletingSegmentId(null);
+      // Then remove the entry (triggers slide animation)
+      onDeleteEntry(segment.entry.id);
+    });
+  }, [onDeleteEntry, deletingSegmentId, deleteAnimProgress]);
 
   const handleContainerPress = () => {
     if (selectedSegment) {
@@ -210,39 +327,88 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
             fill="none"
           />
 
-          {/* Entry segments - non-selected */}
+          {/* Entry segments - non-selected, non-deleting */}
           {segments.map((segment) => {
             const isSelected = selectedSegment?.index === segment.index;
-            if (isSelected) return null; // Render selected segment last
+            const isDeleting = deletingSegmentId === segment.entry.id;
+            const isJustDeleted = justDeletedId === segment.entry.id;
+            if (isSelected || isDeleting || isJustDeleted) return null; // Render these last or not at all
+
+            // Dim segments when one is selected or being deleted
+            const isDimmed = selectedSegment || deletingSegmentId;
+
+            // Use interpolated position for slide animation
+            const { startAngle, sweepAngle } = getInterpolatedPosition(segment);
 
             return (
               <Path
                 key={segment.entry.id}
-                d={createArcPath(segment.startAngle, segment.sweepAngle, radius)}
-                stroke={selectedSegment ? segment.color + '60' : segment.color}
+                d={createArcPath(startAngle, sweepAngle, radius)}
+                stroke={isDimmed ? segment.color + '60' : segment.color}
                 strokeWidth={strokeWidth}
                 strokeLinecap="butt"
                 fill="none"
                 onPress={() => handleSegmentPress(segment)}
+                onLongPress={() => handleSegmentLongPress(segment)}
+                delayLongPress={400}
               />
             );
           })}
 
-          {/* Selected segment - rendered last to be on top */}
-          {selectedSegment && segments[selectedSegment.index] && (
-            <Path
-              d={createArcPath(
-                segments[selectedSegment.index].startAngle,
-                segments[selectedSegment.index].sweepAngle,
-                radius
-              )}
-              stroke={segments[selectedSegment.index].color}
-              strokeWidth={expandedStrokeWidth}
-              strokeLinecap="butt"
-              fill="none"
-              onPress={() => handleSegmentPress(segments[selectedSegment.index])}
-            />
-          )}
+          {/* Selected segment - rendered on top */}
+          {selectedSegment && segments[selectedSegment.index] && !deletingSegmentId && (() => {
+            const segment = segments[selectedSegment.index];
+            const { startAngle, sweepAngle } = getInterpolatedPosition(segment);
+
+            return (
+              <Path
+                d={createArcPath(startAngle, sweepAngle, radius)}
+                stroke={segment.color}
+                strokeWidth={expandedStrokeWidth}
+                strokeLinecap="butt"
+                fill="none"
+                onPress={() => handleSegmentPress(segment)}
+                onLongPress={() => handleSegmentLongPress(segment)}
+                delayLongPress={400}
+              />
+            );
+          })()}
+
+          {/* Deleting segment - animated grow and pop-off */}
+          {deletingSegmentId && (() => {
+            const deletingSegment = segments.find(s => s.entry.id === deletingSegmentId);
+            if (!deletingSegment) return null;
+
+            // Interpolate values for animation
+            const animatedStrokeWidth = deleteAnimProgress.interpolate({
+              inputRange: [0, 0.4, 1],
+              outputRange: [strokeWidth, strokeWidth + 8, strokeWidth + 4],
+            });
+
+            const animatedRadius = deleteAnimProgress.interpolate({
+              inputRange: [0, 0.4, 1],
+              outputRange: [radius, radius, radius + 20],
+            });
+
+            const animatedOpacity = deleteAnimProgress.interpolate({
+              inputRange: [0, 0.4, 0.7, 1],
+              outputRange: [1, 1, 0.5, 0],
+            });
+
+            // We need to listen to the animated values to update the path
+            // Since Path d can't be animated directly, we use the current radius for the path
+            // and animate strokeWidth/opacity for the visual effect
+            return (
+              <AnimatedPath
+                d={createArcPath(deletingSegment.startAngle, deletingSegment.sweepAngle, radius)}
+                stroke={deletingSegment.color}
+                strokeWidth={animatedStrokeWidth}
+                strokeLinecap="butt"
+                fill="none"
+                opacity={animatedOpacity}
+              />
+            );
+          })()}
 
           {/* If no entries but has progress, show single arc */}
           {entries.length === 0 && animatedProgress > 0 && (
