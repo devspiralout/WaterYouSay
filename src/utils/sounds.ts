@@ -6,12 +6,10 @@ let clearAllSound: AudioPlayer | null = null;
 let soundsLoaded = false;
 let loadAttempted = false;
 
-// Gentle water bubble sound effect (public domain from Mixkit)
-const WATER_DROP_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
-// Pop sound for single entry removal (public domain from Mixkit)
-const REMOVE_POP_URL = 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3';
-// Whoosh/sweep sound for clear all (public domain from Mixkit)
-const CLEAR_ALL_URL = 'https://assets.mixkit.co/active_storage/sfx/2457/2457-preview.mp3';
+// Local sound assets (public domain from Mixkit)
+const WATER_DROP_SOUND = require('../../assets/sounds/water-drop.mp3');
+const REMOVE_POP_SOUND = require('../../assets/sounds/pop.mp3');
+const CLEAR_ALL_SOUND = require('../../assets/sounds/whoosh.mp3');
 
 export async function loadSounds(): Promise<void> {
   // Only attempt to load once
@@ -19,17 +17,17 @@ export async function loadSounds(): Promise<void> {
   loadAttempted = true;
 
   try {
-    const waterPlayer = createAudioPlayer(WATER_DROP_URL);
+    const waterPlayer = createAudioPlayer(WATER_DROP_SOUND);
     waterPlayer.loop = false;
     waterPlayer.volume = 0.5;
     waterSound = waterPlayer;
 
-    const removePlayer = createAudioPlayer(REMOVE_POP_URL);
+    const removePlayer = createAudioPlayer(REMOVE_POP_SOUND);
     removePlayer.loop = false;
     removePlayer.volume = 0.6;
     removeSound = removePlayer;
 
-    const clearPlayer = createAudioPlayer(CLEAR_ALL_URL);
+    const clearPlayer = createAudioPlayer(CLEAR_ALL_SOUND);
     clearPlayer.loop = false;
     clearPlayer.volume = 0.5;
     clearAllSound = clearPlayer;
