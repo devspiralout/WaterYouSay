@@ -51,6 +51,32 @@ export interface ClimateSettings {
   enabled: boolean;
 }
 
+export interface StravaSettings {
+  enabled: boolean;
+  connected: boolean;
+}
+
+export interface StravaActivitySummary {
+  id: number;
+  name: string;
+  type: string;
+  sportType: string;
+  movingTimeSeconds: number;
+  distanceMeters: number;
+  startDateLocal: string;
+}
+
+export interface StravaAdjustmentInfo {
+  percentage: number;
+  reason: string;
+  totalDurationMinutes: number;
+  totalDistanceMeters: number;
+  activitySummary: string;
+  activitiesCount: number;
+  lastSyncedAt: string | null;
+  activities: StravaActivitySummary[];
+}
+
 export interface AppSettings {
   unitSystem: UnitSystem;
   dailyGoalMl: number;
@@ -60,6 +86,7 @@ export interface AppSettings {
   soundEnabled: boolean;
   themeMode: ThemeMode;
   climate: ClimateSettings;
+  strava: StravaSettings;
 }
 
 export interface AppState {
@@ -120,6 +147,10 @@ export interface WaterContextType {
   setClimateEnabled: (enabled: boolean) => void;
   climateAdjustment: ClimateAdjustmentInfo | null;
   refreshClimate: () => Promise<void>;
+  setStravaEnabled: (enabled: boolean) => void;
+  setStravaConnected: (connected: boolean) => void;
+  stravaAdjustment: StravaAdjustmentInfo | null;
+  refreshStrava: () => Promise<void>;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   clearToday: () => void;

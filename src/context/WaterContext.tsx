@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, useRef, ReactNode } from 'react';
 import {
   AppState,
   WaterContextType,
@@ -12,9 +12,12 @@ import {
   AchievementId,
   UnlockedAchievement,
   ClimateAdjustmentInfo,
+  StravaAdjustmentInfo,
 } from '../types';
 import { fetchWeather, calculateClimateAdjustment, getAdjustedGoal } from '../utils/weather';
-import { DEFAULT_DAILY_GOAL_ML } from '../constants';
+import { fetchTodayActivities, calculateStravaAdjustment, isStravaConnected } from '../utils/strava';
+import { getStravaCredentials } from '../hooks/useStravaAuth';
+import { DEFAULT_DAILY_GOAL_ML, DEFAULT_STRAVA_SETTINGS } from '../constants';
 import {
   saveProfile,
   loadProfile,
@@ -43,6 +46,8 @@ type Action =
   | { type: 'SET_SOUND_ENABLED'; payload: { enabled: boolean } }
   | { type: 'SET_THEME_MODE'; payload: { mode: ThemeMode } }
   | { type: 'SET_CLIMATE_ENABLED'; payload: { enabled: boolean } }
+  | { type: 'SET_STRAVA_ENABLED'; payload: { enabled: boolean } }
+  | { type: 'SET_STRAVA_CONNECTED'; payload: { connected: boolean } }
   | { type: 'COMPLETE_ONBOARDING' }
   | { type: 'RESET_ONBOARDING' }
   | { type: 'CLEAR_TODAY' }
@@ -67,6 +72,7 @@ const initialState: AppState = {
     climate: {
       enabled: true, // On by default
     },
+    strava: DEFAULT_STRAVA_SETTINGS,
   },
   todayLog: {
     date: getTodayDateString(),
@@ -197,6 +203,30 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
 
+    case 'SET_STRAVA_ENABLED':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          strava: {
+            ...state.settings.strava,
+            enabled: action.payload.enabled,
+          },
+        },
+      };
+
+    case 'SET_STRAVA_CONNECTED':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          strava: {
+            ...state.settings.strava,
+            connected: action.payload.connected,
+          },
+        },
+      };
+
     case 'COMPLETE_ONBOARDING':
       return {
         ...state,
@@ -259,6 +289,8 @@ export function WaterProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [pendingAchievement, setPendingAchievement] = useState<AchievementId | null>(null);
   const [climateAdjustment, setClimateAdjustment] = useState<ClimateAdjustmentInfo | null>(null);
+  const [stravaAdjustment, setStravaAdjustment] = useState<StravaAdjustmentInfo | null>(null);
+  const stravaIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load saved data on mount
   useEffect(() => {
@@ -367,9 +399,82 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     }
   }, [state.settings.climate.enabled, state.settings.dailyGoalMl]);
 
+  // Fetch Strava activities and calculate adjustment
+  const refreshStrava = async () => {
+    const { strava } = state.settings;
+
+    if (!strava.enabled || !strava.connected) {
+      setStravaAdjustment(null);
+      return;
+    }
+
+    const { clientId, clientSecret } = getStravaCredentials();
+    if (!clientId || !clientSecret) {
+      setStravaAdjustment(null);
+      return;
+    }
+
+    const activities = await fetchTodayActivities(clientId, clientSecret);
+    const adjustment = calculateStravaAdjustment(activities);
+    setStravaAdjustment(adjustment);
+  };
+
+  // Check Strava connection status on mount
+  useEffect(() => {
+    async function checkStravaConnection() {
+      const connected = await isStravaConnected();
+      if (connected !== state.settings.strava?.connected) {
+        dispatch({ type: 'SET_STRAVA_CONNECTED', payload: { connected } });
+      }
+    }
+    checkStravaConnection();
+  }, []);
+
+  // Refresh Strava on mount and when settings change
+  useEffect(() => {
+    if (state.settings.strava?.enabled && state.settings.strava?.connected) {
+      refreshStrava();
+
+      // Set up 30-minute polling interval
+      if (stravaIntervalRef.current) {
+        clearInterval(stravaIntervalRef.current);
+      }
+      stravaIntervalRef.current = setInterval(refreshStrava, 30 * 60 * 1000);
+    } else {
+      setStravaAdjustment(null);
+      if (stravaIntervalRef.current) {
+        clearInterval(stravaIntervalRef.current);
+        stravaIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (stravaIntervalRef.current) {
+        clearInterval(stravaIntervalRef.current);
+      }
+    };
+  }, [state.settings.strava?.enabled, state.settings.strava?.connected]);
+
+  // Calculate combined adjustment percentage (climate + strava, capped at 75%)
+  const climatePercentage = climateAdjustment?.percentage ?? 0;
+  const stravaPercentage = stravaAdjustment?.percentage ?? 0;
+  const combinedPercentage = Math.min(75, climatePercentage + stravaPercentage);
+
+  // Calculate effective goal with combined adjustments
+  const baseGoal = state.settings.dailyGoalMl;
+  const effectiveGoalWithAdjustments = combinedPercentage > 0
+    ? Math.round(baseGoal * (1 + combinedPercentage / 100))
+    : baseGoal;
+
   // Calculate max allowed intake (150% of effective goal)
-  const effectiveGoal = climateAdjustment?.adjustedGoalMl ?? state.settings.dailyGoalMl;
+  // Use combined adjustments for effective goal
+  const effectiveGoal = effectiveGoalWithAdjustments;
   const maxDailyIntake = Math.round(effectiveGoal * 1.5);
+
+  // Update climateAdjustment's adjustedGoalMl to reflect combined adjustments
+  const climateAdjustmentWithCombined = climateAdjustment
+    ? { ...climateAdjustment, adjustedGoalMl: effectiveGoalWithAdjustments }
+    : null;
 
   const contextValue: WaterContextType = {
     state,
@@ -413,8 +518,16 @@ export function WaterProvider({ children }: { children: ReactNode }) {
     setClimateEnabled: (enabled: boolean) => {
       dispatch({ type: 'SET_CLIMATE_ENABLED', payload: { enabled } });
     },
-    climateAdjustment,
+    climateAdjustment: climateAdjustmentWithCombined,
     refreshClimate,
+    setStravaEnabled: (enabled: boolean) => {
+      dispatch({ type: 'SET_STRAVA_ENABLED', payload: { enabled } });
+    },
+    setStravaConnected: (connected: boolean) => {
+      dispatch({ type: 'SET_STRAVA_CONNECTED', payload: { connected } });
+    },
+    stravaAdjustment,
+    refreshStrava,
     completeOnboarding: () => {
       dispatch({ type: 'COMPLETE_ONBOARDING' });
     },

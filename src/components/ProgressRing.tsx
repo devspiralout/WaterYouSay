@@ -47,6 +47,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
 
   // Delete animation state
   const [deletingSegmentId, setDeletingSegmentId] = useState<string | null>(null);
+  const [deletingSegmentIndex, setDeletingSegmentIndex] = useState<number | null>(null);
   const [justDeletedId, setJustDeletedId] = useState<string | null>(null);
   const deleteAnimProgress = useRef(new Animated.Value(0)).current;
 
@@ -54,6 +55,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   const [prevSegmentPositions, setPrevSegmentPositions] = useState<Map<string, { start: number; sweep: number }>>(new Map());
   const slideAnimProgress = useRef(new Animated.Value(1)).current;
   const [slideProgress, setSlideProgress] = useState(1); // 0 = old positions, 1 = new positions
+  const [skipSlideAnimation, setSkipSlideAnimation] = useState(false);
 
   // Expose clearSelection method to parent
   useImperativeHandle(ref, () => ({
@@ -66,8 +68,15 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   const radius = (size - strokeWidth) / 2;
   const center = svgSize / 2;
 
-  // Animate progress changes
+  // Animate progress changes (but skip animation after deletion)
   useEffect(() => {
+    // If we just deleted, snap to new progress instantly
+    if (skipSlideAnimation) {
+      animationRef.setValue(progress);
+      setAnimatedProgress(progress);
+      return;
+    }
+
     const listener = animationRef.addListener(({ value }) => {
       setAnimatedProgress(value);
     });
@@ -82,7 +91,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     return () => {
       animationRef.removeListener(listener);
     };
-  }, [progress, animationRef]);
+  }, [progress, animationRef, skipSlideAnimation]);
 
 
   // Clear selection and justDeletedId when entries change
@@ -97,23 +106,28 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   // Gap between segments in degrees - more visible gap
   const gapDegrees = entries.length > 1 ? 1 : 0;
 
-  // Calculate segments with animated progress
+  // Calculate segments with animated progress for smooth fill animation
   const segments = useMemo(() => {
-    // If goal is met, we show a solid green ring instead of segments
-    if (goalMet) return [];
-
     if (entries.length === 0) return [];
 
     const totalMl = entries.reduce((sum, e) => sum + e.amountMl, 0);
     if (totalMl === 0) return [];
 
-    // Calculate total angle used (capped at 360)
-    const totalAngle = Math.min((totalMl / goalMl) * 360, 360);
-    const numGaps = Math.max(0, entries.length - 1);
-    const totalGapAngle = gapDegrees * numGaps;
-    const availableAngle = totalAngle - totalGapAngle;
+    // Use animated progress for smooth fill animation (capped at 100%)
+    const cappedProgress = Math.min(animatedProgress, 100);
+    const totalAngle = (cappedProgress / 100) * 360;
 
-    let currentAngle = -90;
+    // When ring is full (100%), add gap after last segment too
+    const isRingFull = cappedProgress >= 99.9;
+    const numGaps = isRingFull ? entries.length : Math.max(0, entries.length - 1);
+    const totalGapAngle = gapDegrees * numGaps;
+    const availableAngle = Math.max(0, totalAngle - totalGapAngle);
+
+    // Green when goal met, blue otherwise
+    const segmentColor = goalMet ? colors.success : colors.primary;
+
+    // Offset start angle slightly when ring is full to center the gap at top
+    let currentAngle = -90 + (isRingFull ? gapDegrees / 2 : 0);
 
     return entries.map((entry, index) => {
       // Each segment sized by its proportion of total intake
@@ -127,15 +141,15 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
         entry,
         startAngle,
         sweepAngle,
-        color: colors.primary,
+        color: segmentColor,
         index,
       };
     });
-  }, [entries, goalMl, colors, gapDegrees, goalMet]);
+  }, [entries, goalMl, colors, gapDegrees, goalMet, animatedProgress]);
 
   // Trigger slide animation when segments change (after deletion)
   useEffect(() => {
-    if (prevSegmentPositions.size > 0 && !deletingSegmentId) {
+    if (prevSegmentPositions.size > 0 && !deletingSegmentId && !skipSlideAnimation) {
       // Check if any segment moved (not just added)
       const hasMovement = segments.some(seg => {
         const prev = prevSegmentPositions.get(seg.entry.id);
@@ -160,6 +174,11 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
           setSlideProgress(1);
         });
       }
+    }
+
+    // Reset skip flag
+    if (skipSlideAnimation) {
+      setSkipSlideAnimation(false);
     }
 
     // Store current positions for next change
@@ -235,7 +254,11 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
 
     warningFeedback();
     setDeletingSegmentId(segment.entry.id);
+    setDeletingSegmentIndex(segment.index);
     setSelectedSegment(null);
+
+    // Skip slide animation (looks buggy)
+    setSkipSlideAnimation(true);
 
     // Reset animation value for new delete
     deleteAnimProgress.setValue(0);
@@ -263,6 +286,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
       setJustDeletedId(segment.entry.id);
       // Clear deleting state first (keeps opacity at 0 since we don't reset deleteAnimProgress)
       setDeletingSegmentId(null);
+      setDeletingSegmentIndex(null);
       // Then remove the entry (triggers slide animation)
       onDeleteEntry(segment.entry.id);
     });
@@ -295,8 +319,8 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     if (goalMet) {
       return {
         main: currentAmount,
-        sub: 'Goal reached!',
-        detail: 'Great job staying hydrated',
+        sub: `of ${goalAmount}`,
+        detail: entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : '',
       };
     }
     return {
@@ -407,22 +431,11 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
             );
           })()}
 
-          {/* Goal met - show solid green ring */}
-          {goalMet && (
+          {/* If no entries but has progress, show single arc (but not right after deletion) */}
+          {entries.length === 0 && animatedProgress > 0 && !justDeletedId && (
             <Path
-              d={createArcPath(-90, 359.9, radius)}
-              stroke={colors.success}
-              strokeWidth={strokeWidth}
-              strokeLinecap="butt"
-              fill="none"
-            />
-          )}
-
-          {/* If no entries but has progress (and goal not met), show single arc */}
-          {!goalMet && entries.length === 0 && animatedProgress > 0 && (
-            <Path
-              d={createArcPath(-90, (animatedProgress / 100) * 360, radius)}
-              stroke={colors.primary}
+              d={createArcPath(-90, Math.min(animatedProgress / 100, 1) * 360, radius)}
+              stroke={goalMet ? colors.success : colors.primary}
               strokeWidth={strokeWidth}
               strokeLinecap="butt"
               fill="none"
@@ -436,21 +449,21 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
           <Text
             style={[
               styles.currentAmount,
-              { color: selectedSegment ? colors.primary : goalMet ? colors.success : colors.text },
+              { color: selectedSegment ? colors.primary : colors.text },
               selectedSegment && styles.selectedAmount,
             ]}
           >
             {centerContent.main}
           </Text>
           <View style={styles.goalContainer}>
-            <Text style={[styles.goalAmount, { color: goalMet ? colors.success : colors.textSecondary }]}>
+            <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>
               {centerContent.sub}
             </Text>
           </View>
           <Text
             style={[
               styles.entryCount,
-              { color: centerContent.detail ? (goalMet ? colors.success : colors.textTertiary) : 'transparent' }
+              { color: centerContent.detail ? colors.textTertiary : 'transparent' }
             ]}
           >
             {centerContent.detail || 'no entries'}

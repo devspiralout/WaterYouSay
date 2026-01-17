@@ -10,6 +10,7 @@ import {
   Modal,
   Switch,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -28,6 +29,7 @@ import { clearAllData } from '../utils/storage';
 import { getCalculationBreakdown, getTodayDateString } from '../utils/calculations';
 import { MOCK_PRESETS } from '../utils/mockData';
 import { scheduleWaterReminders, requestNotificationPermissions } from '../utils/notifications';
+import { useStravaAuth } from '../hooks/useStravaAuth';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -45,11 +47,31 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 export function SettingsScreen() {
-  const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, setClimateEnabled, climateAdjustment, resetOnboarding, loadMockData } = useWater();
+  const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, setClimateEnabled, climateAdjustment, setStravaEnabled, setStravaConnected, stravaAdjustment, refreshStrava, resetOnboarding, loadMockData } = useWater();
   const { colors } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const { settings, profile, history, todayLog } = state;
   const [showDebug, setShowDebug] = useState(false);
+
+  // Strava auth hook
+  const {
+    connect: stravaConnect,
+    disconnect: stravaDisconnect,
+    isLoading: stravaLoading,
+    error: stravaError,
+  } = useStravaAuth(
+    () => {
+      // On connect success
+      setStravaConnected(true);
+      setStravaEnabled(true);
+      refreshStrava();
+    },
+    () => {
+      // On disconnect
+      setStravaConnected(false);
+      setStravaEnabled(false);
+    }
+  );
 
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [newGoal, setNewGoal] = useState(settings.dailyGoalMl.toString());
@@ -491,6 +513,91 @@ export function SettingsScreen() {
           </View>
           <Text style={[styles.disclaimer, dynamicStyles.disclaimer]}>
             Uses your location to get current temperature and adjust your hydration goal accordingly.
+          </Text>
+        </View>
+
+        {/* Workout Adjustment (Strava) */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>WORKOUT ADJUSTMENT</Text>
+          <View style={[styles.reminderCard, dynamicStyles.reminderCard]}>
+            {!settings.strava?.connected ? (
+              // Not connected state
+              <View style={styles.reminderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Connect Strava</Text>
+                  <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>
+                    Sync workouts to adjust your water goal
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.stravaConnectButton, { backgroundColor: '#FC4C02' }]}
+                  onPress={stravaConnect}
+                  disabled={stravaLoading}
+                >
+                  {stravaLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.stravaConnectButtonText}>Connect</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              // Connected state
+              <>
+                <View style={styles.reminderRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Strava Sync</Text>
+                    <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>
+                      {settings.strava?.enabled && stravaAdjustment && stravaAdjustment.percentage > 0
+                        ? `+${stravaAdjustment.percentage}% (${stravaAdjustment.reason})`
+                        : 'Adjust goal based on today\'s workouts'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={settings.strava?.enabled ?? false}
+                    onValueChange={setStravaEnabled}
+                    trackColor={{ false: colors.border, true: colors.primaryMuted }}
+                    thumbColor={settings.strava?.enabled ? colors.primary : colors.textTertiary}
+                  />
+                </View>
+                {settings.strava?.enabled && stravaAdjustment && stravaAdjustment.activitiesCount > 0 && (
+                  <View style={[styles.intervalRow, dynamicStyles.intervalRow]}>
+                    <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>
+                      {stravaAdjustment.activitySummary}
+                    </Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={[styles.intervalRow, dynamicStyles.intervalRow]}
+                  onPress={() => {
+                    Alert.alert(
+                      'Disconnect Strava',
+                      'Are you sure you want to disconnect your Strava account?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Disconnect',
+                          style: 'destructive',
+                          onPress: stravaDisconnect,
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <Text style={[styles.stravaDisconnectText, { color: colors.error }]}>
+                    Disconnect Strava
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+          {stravaError && (
+            <Text style={[styles.disclaimer, { color: colors.error }]}>
+              {stravaError}
+            </Text>
+          )}
+          <Text style={[styles.disclaimer, dynamicStyles.disclaimer]}>
+            Connect your Strava account to automatically increase your water goal based on workout intensity.
           </Text>
         </View>
 
@@ -1076,6 +1183,22 @@ const styles = StyleSheet.create({
   },
   dangerText: {
     fontSize: 17,
+  },
+  stravaConnectButton: {
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    minWidth: 90,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stravaConnectButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  stravaDisconnectText: {
+    fontSize: 15,
   },
   aboutSection: {
     alignItems: 'center',

@@ -27,13 +27,16 @@ import { TrophyIcon } from '../components/TrophyIcon';
 import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
 import { WeatherAnimation } from '../components/WeatherAnimation';
+import { StravaWidget } from '../components/StravaWidget';
+import { StravaActivityIcon } from '../components/StravaActivityIcon';
 
 export function HomeScreen() {
-  const { state, addWater, removeEntry, climateAdjustment } = useWater();
+  const { state, addWater, removeEntry, clearToday, climateAdjustment, stravaAdjustment } = useWater();
   const { colors } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [weatherModalVisible, setWeatherModalVisible] = useState(false);
+  const [stravaModalVisible, setStravaModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const progressRingRef = useRef<ProgressRingRef>(null);
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
@@ -43,10 +46,15 @@ export function HomeScreen() {
   const isViewingToday = isToday(selectedDate);
   const isViewingFuture = isFutureDate(selectedDate);
 
-  // Calculate effective goal with climate adjustment
+  // Calculate effective goal with climate adjustment (which now includes strava)
   const effectiveGoalMl = climateAdjustment
     ? climateAdjustment.adjustedGoalMl
     : settings.dailyGoalMl;
+
+  // Calculate combined percentage for display (climate + strava, capped at 75%)
+  const climatePercentage = climateAdjustment?.percentage ?? 0;
+  const stravaPercentage = stravaAdjustment?.percentage ?? 0;
+  const combinedPercentage = Math.min(75, climatePercentage + stravaPercentage);
 
   // Swipe gesture handler for changing days
   const panResponder = useMemo(() => {
@@ -143,6 +151,25 @@ export function HomeScreen() {
     }
   };
 
+  // Helper functions for Strava modal
+  const formatActivityDuration = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) {
+      return `${minutes} min`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMins = minutes % 60;
+    return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+  };
+
+  const formatActivityDistance = (meters: number): string => {
+    if (meters < 1000) {
+      return `${Math.round(meters)}m`;
+    }
+    const km = meters / 1000;
+    return km >= 10 ? `${Math.round(km)} km` : `${km.toFixed(1)} km`;
+  };
+
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <WaterBackground progress={progress} />
@@ -179,7 +206,7 @@ export function HomeScreen() {
           <ProgressRing
             ref={progressRingRef}
             progress={progress}
-            currentAmount={mlToDisplay(selectedDayData.totalMl, settings.unitSystem)}
+            currentAmount={mlToDisplay(Math.min(selectedDayData.totalMl, effectiveGoalMl), settings.unitSystem)}
             goalAmount={mlToDisplay(effectiveGoalMl, settings.unitSystem)}
             entries={isViewingToday ? todayLog.entries : []}
             goalMl={effectiveGoalMl}
@@ -187,12 +214,20 @@ export function HomeScreen() {
             onDeleteEntry={isViewingToday ? removeEntry : undefined}
           />
 
-          {/* Past day message - sits under the ring */}
-          {!isViewingToday && !isViewingFuture && selectedDayData.totalMl > 0 && (
-            <Text style={[styles.pastDayText, { color: colors.textSecondary, marginTop: 20 }]}>
-              You drank {mlToDisplay(selectedDayData.totalMl, settings.unitSystem)} this day
-            </Text>
-          )}
+           {/* Clear All Button */}
+           {isViewingToday && todayLog.entries.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  lightTap();
+                  clearToday();
+                }}
+              >
+                <Text style={[styles.clearButtonText, { color: colors.textTertiary }]}>
+                  Clear All
+                </Text>
+              </TouchableOpacity>
+            )}
 
           {/* Future day message */}
           {isViewingFuture && (
@@ -206,6 +241,16 @@ export function HomeScreen() {
         {isViewingToday && (
           <TouchableWithoutFeedback onPress={() => progressRingRef.current?.clearSelection()}>
             <View style={[styles.quickAddContainer, { opacity: !calendarExpanded ? 1 : 0 }]} pointerEvents={!calendarExpanded ? 'auto' : 'none'}>
+            {/* Strava Widget */}
+            {stravaAdjustment && stravaAdjustment.activitiesCount > 0 && (
+              <StravaWidget
+                adjustment={stravaAdjustment}
+                onPress={() => {
+                  lightTap();
+                  setStravaModalVisible(true);
+                }}
+              />
+            )}
             {/* Weather Widget */}
             {climateAdjustment && (
               <TouchableOpacity
@@ -230,10 +275,10 @@ export function HomeScreen() {
                     {climateAdjustment.locationName}
                   </Text>
                 </View>
-                {climateAdjustment.percentage > 0 && (
+                {combinedPercentage > 0 && (
                   <View style={[styles.weatherBadge, { backgroundColor: colors.primary + '20' }]}>
                     <Text style={[styles.weatherBadgeText, { color: colors.primary }]}>
-                      +{climateAdjustment.percentage}%
+                      +{combinedPercentage}%
                     </Text>
                   </View>
                 )}
@@ -311,6 +356,93 @@ export function HomeScreen() {
         </View>
       </Modal>
 
+      {/* Strava Details Modal */}
+      <Modal
+        visible={stravaModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStravaModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setStravaModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.stravaModalContent, dynamicStyles.modalContent]}>
+                {stravaAdjustment && stravaAdjustment.activitiesCount > 0 && (
+                  <>
+                    <View style={styles.stravaModalHeader}>
+                      <StravaActivityIcon
+                        activityType={stravaAdjustment.activities[0]?.sportType || 'workout'}
+                        size={48}
+                      />
+                      <View style={styles.stravaModalHeaderText}>
+                        <Text style={[styles.stravaModalTitle, { color: colors.text }]}>
+                          {stravaAdjustment.activitiesCount > 1
+                            ? `${stravaAdjustment.activitiesCount} Activities`
+                            : stravaAdjustment.activities[0]?.name || 'Workout'}
+                        </Text>
+                        <Text style={[styles.stravaModalSubtitle, { color: colors.textSecondary }]}>
+                          Today's workouts
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.stravaModalDivider, { backgroundColor: colors.border }]} />
+
+                    {/* Activity List */}
+                    <View style={styles.stravaModalSection}>
+                      {stravaAdjustment.activities.map((activity, index) => (
+                        <View key={activity.id} style={styles.stravaActivityRow}>
+                          <StravaActivityIcon
+                            activityType={activity.sportType || activity.type}
+                            size={28}
+                          />
+                          <View style={styles.stravaActivityInfo}>
+                            <Text style={[styles.stravaActivityName, { color: colors.text }]} numberOfLines={1}>
+                              {activity.name}
+                            </Text>
+                            <Text style={[styles.stravaActivityDetails, { color: colors.textSecondary }]}>
+                              {formatActivityDuration(activity.movingTimeSeconds)}
+                              {activity.distanceMeters > 0 && ` \u2022 ${formatActivityDistance(activity.distanceMeters)}`}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={[styles.stravaModalDivider, { backgroundColor: colors.border }]} />
+
+                    <View style={styles.stravaModalSection}>
+                      <Text style={[styles.stravaModalLabel, { color: colors.textSecondary }]}>
+                        Hydration Impact
+                      </Text>
+                      {stravaAdjustment.percentage > 0 ? (
+                        <Text style={[styles.stravaModalValue, { color: '#FC4C02' }]}>
+                          +{stravaAdjustment.percentage}% increase recommended
+                        </Text>
+                      ) : (
+                        <Text style={[styles.stravaModalValue, { color: colors.success }]}>
+                          No adjustment needed
+                        </Text>
+                      )}
+                      <Text style={[styles.stravaModalReason, { color: colors.textSecondary }]}>
+                        Based on {stravaAdjustment.totalDurationMinutes} min of activity
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.stravaModalClose, { backgroundColor: '#FC4C02' }]}
+                      onPress={() => setStravaModalVisible(false)}
+                    >
+                      <Text style={styles.stravaModalCloseText}>Got it</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
       {/* Weather Details Modal */}
       <Modal
         visible={weatherModalVisible}
@@ -353,18 +485,26 @@ export function HomeScreen() {
                       <Text style={[styles.weatherModalLabel, { color: colors.textSecondary }]}>
                         Hydration Impact
                       </Text>
-                      {climateAdjustment.percentage > 0 ? (
-                        <>
-                          <Text style={[styles.weatherModalValue, { color: colors.primary }]}>
-                            +{climateAdjustment.percentage}% increase recommended
-                          </Text>
-                          <Text style={[styles.weatherModalReason, { color: colors.textSecondary }]}>
-                            {climateAdjustment.reason}
-                          </Text>
-                        </>
-                      ) : (
+                      {climatePercentage > 0 && (
+                        <Text style={[styles.weatherModalValue, { color: colors.primary }]}>
+                          +{climatePercentage}% from weather
+                          {climateAdjustment.reason ? ` (${climateAdjustment.reason.toLowerCase()})` : ''}
+                        </Text>
+                      )}
+                      {stravaPercentage > 0 && (
+                        <Text style={[styles.weatherModalValue, { color: '#FC4C02' }]}>
+                          +{stravaPercentage}% from workout
+                          {stravaAdjustment?.reason ? ` (${stravaAdjustment.reason})` : ''}
+                        </Text>
+                      )}
+                      {combinedPercentage === 0 && (
                         <Text style={[styles.weatherModalValue, { color: colors.success }]}>
                           No adjustment needed
+                        </Text>
+                      )}
+                      {combinedPercentage > 0 && climatePercentage > 0 && stravaPercentage > 0 && (
+                        <Text style={[styles.weatherModalReason, { color: colors.textSecondary, marginTop: 4 }]}>
+                          Total: +{combinedPercentage}%
                         </Text>
                       )}
                     </View>
@@ -379,13 +519,13 @@ export function HomeScreen() {
                         <Text style={[styles.weatherModalGoalBase, { color: colors.textSecondary }]}>
                           {mlToDisplay(settings.dailyGoalMl, settings.unitSystem)} base
                         </Text>
-                        {climateAdjustment.percentage > 0 && (
+                        {combinedPercentage > 0 && (
                           <>
                             <Text style={[styles.weatherModalGoalArrow, { color: colors.textTertiary }]}>
                               →
                             </Text>
                             <Text style={[styles.weatherModalGoalAdjusted, { color: colors.primary }]}>
-                              {mlToDisplay(climateAdjustment.adjustedGoalMl, settings.unitSystem)}
+                              {mlToDisplay(effectiveGoalMl, settings.unitSystem)}
                             </Text>
                           </>
                         )}
@@ -501,6 +641,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
+  },
+  clearButton: {
+    marginTop: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignSelf: 'center',
+  },
+  clearButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
@@ -639,6 +789,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   weatherModalCloseText: {
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  // Strava Modal Styles
+  stravaModalContent: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  stravaModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 8,
+  },
+  stravaModalHeaderText: {
+    flex: 1,
+  },
+  stravaModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  stravaModalSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  stravaModalDivider: {
+    height: 1,
+    marginVertical: 16,
+  },
+  stravaModalSection: {
+    gap: 8,
+  },
+  stravaActivityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  stravaActivityInfo: {
+    flex: 1,
+  },
+  stravaActivityName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  stravaActivityDetails: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  stravaModalLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  stravaModalValue: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  stravaModalReason: {
+    fontSize: 14,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  stravaModalClose: {
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  stravaModalCloseText: {
     fontSize: 17,
     color: '#FFFFFF',
     fontWeight: '600',

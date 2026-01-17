@@ -50,6 +50,7 @@ export async function loadSettings(): Promise<AppSettings> {
         soundEnabled: settings.soundEnabled ?? true,
         themeMode: settings.themeMode || 'system',
         climate: settings.climate || { enabled: true },
+        strava: settings.strava || { enabled: false, connected: false },
       };
     }
   } catch (error) {
@@ -67,6 +68,10 @@ export async function loadSettings(): Promise<AppSettings> {
     themeMode: 'system',
     climate: {
       enabled: true,
+    },
+    strava: {
+      enabled: false,
+      connected: false,
     },
   };
 }

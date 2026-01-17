@@ -10,16 +10,14 @@ const REMOVE_POP_URL = 'https://assets.mixkit.co/active_storage/sfx/2568/2568-pr
 
 export async function loadSounds(): Promise<void> {
   try {
-    const waterPlayer = createAudioPlayer(WATER_DROP_URL, {
-      volume: 0.5,
-    });
+    const waterPlayer = createAudioPlayer(WATER_DROP_URL);
     waterPlayer.loop = false;
+    waterPlayer.volume = 0.5;
     waterSound = waterPlayer;
 
-    const removePlayer = createAudioPlayer(REMOVE_POP_URL, {
-      volume: 0.8,
-    });
+    const removePlayer = createAudioPlayer(REMOVE_POP_URL);
     removePlayer.loop = false;
+    removePlayer.volume = 0.8;
     removeSound = removePlayer;
   } catch (error) {
     console.log('Error loading sounds:', error);

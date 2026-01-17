@@ -88,6 +88,45 @@ export const DEFAULT_DAILY_GOAL_ML = 2500;
 export const ML_PER_OZ = 29.5735;
 export const ML_PER_CUP = 236.588;
 
+// Default Strava settings
+export const DEFAULT_STRAVA_SETTINGS = {
+  enabled: false,
+  connected: false,
+};
+
+// Strava activity intensity multipliers for hydration calculation
+export const STRAVA_ACTIVITY_MULTIPLIERS: Record<string, number> = {
+  Run: 1.2,
+  TrailRun: 1.2,
+  VirtualRun: 1.2,
+  Ride: 1.0,
+  VirtualRide: 1.0,
+  MountainBikeRide: 1.0,
+  GravelRide: 1.0,
+  EBikeRide: 0.8,
+  Swim: 0.7,
+  Walk: 0.6,
+  Hike: 0.9,
+  Workout: 1.0,
+  WeightTraining: 0.8,
+  Crossfit: 1.1,
+  Elliptical: 0.9,
+  StairStepper: 0.9,
+  Yoga: 0.4,
+  Pilates: 0.4,
+  RockClimbing: 0.9,
+  Soccer: 1.1,
+  Tennis: 1.0,
+  Golf: 0.5,
+  Rowing: 1.0,
+  Kayaking: 0.8,
+  Surfing: 0.7,
+  Skiing: 0.9,
+  Snowboard: 0.8,
+  IceSkate: 0.7,
+  Other: 0.8,
+};
+
 export const STORAGE_KEYS = {
   PROFILE: '@wateryousay_profile',
   SETTINGS: '@wateryousay_settings',
