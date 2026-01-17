@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { StravaAdjustmentInfo, StravaActivitySummary } from '../types';
-import { StravaActivityIcon } from './StravaActivityIcon';
 import { useTheme } from '../context/ThemeContext';
 
 interface StravaWidgetProps {
@@ -10,6 +10,25 @@ interface StravaWidgetProps {
 }
 
 const STRAVA_ORANGE = '#FC4C02';
+
+function StravaLogo({ size = 24 }: { size?: number }) {
+  // Official Strava logo - two chevrons
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64">
+      {/* Back chevron (lighter) */}
+      <Path
+        d="M41.03 47.852l-5.572-10.976h-8.172L41.03 64l13.736-27.124h-8.18l-5.556 10.976z"
+        fill={STRAVA_ORANGE}
+        opacity={0.6}
+      />
+      {/* Front chevron */}
+      <Path
+        d="M27.898 21.944l7.564 14.928h11.124L27.898 0 9.23 36.872h11.124l7.544-14.928z"
+        fill={STRAVA_ORANGE}
+      />
+    </Svg>
+  );
+}
 
 function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -53,11 +72,7 @@ export function StravaWidget({ adjustment, onPress }: StravaWidgetProps) {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <StravaActivityIcon
-        activityType={mainActivity?.sportType || mainActivity?.type || 'workout'}
-        size={36}
-        color={STRAVA_ORANGE}
-      />
+      <StravaLogo size={36} />
 
       <View style={styles.content}>
         <View style={styles.titleRow}>

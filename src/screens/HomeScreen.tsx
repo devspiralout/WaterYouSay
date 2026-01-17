@@ -28,7 +28,25 @@ import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
 import { WeatherAnimation } from '../components/WeatherAnimation';
 import { StravaWidget } from '../components/StravaWidget';
-import { StravaActivityIcon } from '../components/StravaActivityIcon';
+import Svg, { Path } from 'react-native-svg';
+
+const STRAVA_ORANGE = '#FC4C02';
+
+function StravaLogo({ size = 24 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64">
+      <Path
+        d="M41.03 47.852l-5.572-10.976h-8.172L41.03 64l13.736-27.124h-8.18l-5.556 10.976z"
+        fill={STRAVA_ORANGE}
+        opacity={0.6}
+      />
+      <Path
+        d="M27.898 21.944l7.564 14.928h11.124L27.898 0 9.23 36.872h11.124l7.544-14.928z"
+        fill={STRAVA_ORANGE}
+      />
+    </Svg>
+  );
+}
 
 export function HomeScreen() {
   const { state, addWater, removeEntry, clearToday, climateAdjustment, stravaAdjustment } = useWater();
@@ -370,18 +388,13 @@ export function HomeScreen() {
                 {stravaAdjustment && stravaAdjustment.activitiesCount > 0 && (
                   <>
                     <View style={styles.stravaModalHeader}>
-                      <StravaActivityIcon
-                        activityType={stravaAdjustment.activities[0]?.sportType || 'workout'}
-                        size={48}
-                      />
+                      <StravaLogo size={48} />
                       <View style={styles.stravaModalHeaderText}>
                         <Text style={[styles.stravaModalTitle, { color: colors.text }]}>
-                          {stravaAdjustment.activitiesCount > 1
-                            ? `${stravaAdjustment.activitiesCount} Activities`
-                            : stravaAdjustment.activities[0]?.name || 'Workout'}
+                          Today's Activity
                         </Text>
                         <Text style={[styles.stravaModalSubtitle, { color: colors.textSecondary }]}>
-                          Today's workouts
+                          {stravaAdjustment.activitiesCount} {stravaAdjustment.activitiesCount === 1 ? 'workout' : 'workouts'}
                         </Text>
                       </View>
                     </View>
@@ -390,21 +403,15 @@ export function HomeScreen() {
 
                     {/* Activity List */}
                     <View style={styles.stravaModalSection}>
-                      {stravaAdjustment.activities.map((activity, index) => (
+                      {stravaAdjustment.activities.map((activity) => (
                         <View key={activity.id} style={styles.stravaActivityRow}>
-                          <StravaActivityIcon
-                            activityType={activity.sportType || activity.type}
-                            size={28}
-                          />
-                          <View style={styles.stravaActivityInfo}>
-                            <Text style={[styles.stravaActivityName, { color: colors.text }]} numberOfLines={1}>
-                              {activity.name}
-                            </Text>
-                            <Text style={[styles.stravaActivityDetails, { color: colors.textSecondary }]}>
-                              {formatActivityDuration(activity.movingTimeSeconds)}
-                              {activity.distanceMeters > 0 && ` \u2022 ${formatActivityDistance(activity.distanceMeters)}`}
-                            </Text>
-                          </View>
+                          <Text style={[styles.stravaActivityName, { color: colors.text }]} numberOfLines={1}>
+                            {activity.name}
+                          </Text>
+                          <Text style={[styles.stravaActivityDetails, { color: colors.textSecondary }]}>
+                            {formatActivityDuration(activity.movingTimeSeconds)}
+                            {activity.distanceMeters > 0 && ` \u2022 ${formatActivityDistance(activity.distanceMeters)}`}
+                          </Text>
                         </View>
                       ))}
                     </View>
@@ -416,7 +423,7 @@ export function HomeScreen() {
                         Hydration Impact
                       </Text>
                       {stravaAdjustment.percentage > 0 ? (
-                        <Text style={[styles.stravaModalValue, { color: '#FC4C02' }]}>
+                        <Text style={[styles.stravaModalValue, { color: STRAVA_ORANGE }]}>
                           +{stravaAdjustment.percentage}% increase recommended
                         </Text>
                       ) : (
@@ -430,11 +437,18 @@ export function HomeScreen() {
                     </View>
 
                     <TouchableOpacity
-                      style={[styles.stravaModalClose, { backgroundColor: '#FC4C02' }]}
+                      style={[styles.stravaModalClose, { backgroundColor: STRAVA_ORANGE }]}
                       onPress={() => setStravaModalVisible(false)}
                     >
                       <Text style={styles.stravaModalCloseText}>Got it</Text>
                     </TouchableOpacity>
+
+                    <View style={styles.poweredByStrava}>
+                      <StravaLogo size={14} />
+                      <Text style={[styles.poweredByStravaText, { color: colors.textTertiary }]}>
+                        Powered by Strava
+                      </Text>
+                    </View>
                   </>
                 )}
               </View>
@@ -826,13 +840,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stravaActivityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     paddingVertical: 8,
-  },
-  stravaActivityInfo: {
-    flex: 1,
   },
   stravaActivityName: {
     fontSize: 16,
@@ -867,5 +875,16 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  poweredByStrava: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 16,
+  },
+  poweredByStravaText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
