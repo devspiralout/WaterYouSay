@@ -2,7 +2,10 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WEATHER_CACHE_KEY = '@weather_cache';
+const LOCATION_NAME_CACHE_KEY = '@location_name_cache';
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+const LOCATION_NAME_CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const LOCATION_CHANGE_THRESHOLD_KM = 5; // Only re-geocode if moved more than 5km
 
 export interface WeatherData {
   temperature: number; // Celsius
@@ -22,6 +25,24 @@ export interface ClimateAdjustment {
 interface CachedWeather {
   data: WeatherData;
   cachedAt: number;
+}
+
+interface CachedLocationName {
+  name: string;
+  latitude: number;
+  longitude: number;
+  cachedAt: number;
+}
+
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 // Open-Meteo API - completely free, no API key required
@@ -49,16 +70,72 @@ export async function getLocation(): Promise<{ latitude: number; longitude: numb
   }
 }
 
+async function getCachedLocationName(latitude: number, longitude: number): Promise<string | null> {
+  try {
+    const cached = await AsyncStorage.getItem(LOCATION_NAME_CACHE_KEY);
+    if (!cached) return null;
+
+    const data: CachedLocationName = JSON.parse(cached);
+    const age = Date.now() - data.cachedAt;
+    const distance = calculateDistanceKm(latitude, longitude, data.latitude, data.longitude);
+
+    // Use cache if it's fresh enough and we haven't moved far
+    if (age < LOCATION_NAME_CACHE_DURATION_MS && distance < LOCATION_CHANGE_THRESHOLD_KM) {
+      return data.name;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function cacheLocationName(name: string, latitude: number, longitude: number): Promise<void> {
+  try {
+    const data: CachedLocationName = {
+      name,
+      latitude,
+      longitude,
+      cachedAt: Date.now(),
+    };
+    await AsyncStorage.setItem(LOCATION_NAME_CACHE_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error caching location name:', error);
+  }
+}
+
 async function getLocationName(latitude: number, longitude: number): Promise<string> {
+  // Check cache first to avoid rate limits
+  const cached = await getCachedLocationName(latitude, longitude);
+  if (cached) {
+    return cached;
+  }
+
   try {
     const results = await Location.reverseGeocodeAsync({ latitude, longitude });
     if (results.length > 0) {
       const { city, subregion, region } = results[0];
-      // Prefer city, fall back to subregion or region
-      return city || subregion || region || 'Unknown location';
+      const name = city || subregion || region || 'Unknown location';
+
+      // Cache the result
+      if (name !== 'Unknown location') {
+        await cacheLocationName(name, latitude, longitude);
+      }
+
+      return name;
     }
   } catch (error) {
     console.error('Error reverse geocoding:', error);
+
+    // If rate limited, try to use any existing cached name regardless of distance
+    try {
+      const fallback = await AsyncStorage.getItem(LOCATION_NAME_CACHE_KEY);
+      if (fallback) {
+        const data: CachedLocationName = JSON.parse(fallback);
+        return data.name;
+      }
+    } catch {
+      // Ignore
+    }
   }
   return 'Unknown location';
 }
