@@ -18,6 +18,7 @@ interface ProgressRingProps {
   goalMl?: number;
   unitSystem?: 'metric' | 'imperial';
   onDeleteEntry?: (entryId: string) => void;
+  onDeleteStart?: () => void;
 }
 
 export interface ProgressRingRef {
@@ -39,6 +40,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   goalMl = 2500,
   unitSystem = 'metric',
   onDeleteEntry,
+  onDeleteStart,
 }, ref) => {
   const { colors } = useTheme();
   const [selectedSegment, setSelectedSegment] = useState<SelectedSegment | null>(null);
@@ -253,6 +255,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     if (!onDeleteEntry || deletingSegmentId) return;
 
     warningFeedback();
+    onDeleteStart?.();
     setDeletingSegmentId(segment.entry.id);
     setDeletingSegmentIndex(segment.index);
     setSelectedSegment(null);
@@ -290,7 +293,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
       // Then remove the entry (triggers slide animation)
       onDeleteEntry(segment.entry.id);
     });
-  }, [onDeleteEntry, deletingSegmentId, deleteAnimProgress]);
+  }, [onDeleteEntry, onDeleteStart, deletingSegmentId, deleteAnimProgress]);
 
   const handleContainerPress = () => {
     if (selectedSegment) {

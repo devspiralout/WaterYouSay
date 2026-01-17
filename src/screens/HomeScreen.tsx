@@ -21,7 +21,7 @@ import { WaterBackground } from '../components/WaterBackground';
 import { calculateProgress, getTodayDateString, isToday, isFutureDate, formatDateString } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, lightTap } from '../utils/haptics';
-import { loadSounds, playWaterSound } from '../utils/sounds';
+import { loadSounds, playWaterSound, playRemoveSound, playClearAllSound } from '../utils/sounds';
 import { ExpandableCalendar } from '../components/ExpandableCalendar';
 // Trophy icon hidden for now
 // import { TrophyIcon } from '../components/TrophyIcon';
@@ -170,6 +170,12 @@ export function HomeScreen() {
     }
   };
 
+  const handleDeleteStart = () => {
+    if (settings.soundEnabled) {
+      playRemoveSound();
+    }
+  };
+
   // Helper functions for Strava modal
   const formatActivityDuration = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
@@ -229,6 +235,7 @@ export function HomeScreen() {
             goalMl={effectiveGoalMl}
             unitSystem={settings.unitSystem}
             onDeleteEntry={isViewingToday ? removeEntry : undefined}
+            onDeleteStart={isViewingToday ? handleDeleteStart : undefined}
           />
 
            {/* Clear All Button */}
@@ -237,6 +244,9 @@ export function HomeScreen() {
                 style={styles.clearButton}
                 onPress={() => {
                   lightTap();
+                  if (settings.soundEnabled) {
+                    playClearAllSound();
+                  }
                   clearToday();
                 }}
               >
@@ -292,14 +302,27 @@ export function HomeScreen() {
                     {climateAdjustment.locationName}
                   </Text>
                 </View>
-                {combinedPercentage > 0 && (
+                {climatePercentage > 0 && (
                   <View style={[styles.weatherBadge, { backgroundColor: colors.primary + '20' }]}>
                     <Text style={[styles.weatherBadgeText, { color: colors.primary }]}>
-                      +{combinedPercentage}%
+                      +{climatePercentage}%
                     </Text>
                   </View>
                 )}
               </TouchableOpacity>
+            )}
+            {/* Combined adjustment indicator */}
+            {combinedPercentage > 0 && (
+              <View style={styles.combinedAdjustmentRow}>
+                <Text style={[styles.combinedAdjustmentText, { color: colors.textSecondary }]}>
+                  Today's goal: {mlToDisplay(effectiveGoalMl, settings.unitSystem)}
+                </Text>
+                <View style={[styles.combinedAdjustmentBadge, { backgroundColor: colors.primary + '15' }]}>
+                  <Text style={[styles.combinedAdjustmentBadgeText, { color: colors.primary }]}>
+                    +{combinedPercentage}%
+                  </Text>
+                </View>
+              </View>
             )}
             <View style={styles.buttonRow}>
               {quickAddAmounts.map(({ ml, display }) => (
@@ -496,53 +519,18 @@ export function HomeScreen() {
 
                     <View style={styles.weatherModalSection}>
                       <Text style={[styles.weatherModalLabel, { color: colors.textSecondary }]}>
-                        Hydration Impact
+                        Weather Impact
                       </Text>
-                      {climatePercentage > 0 && (
+                      {climatePercentage > 0 ? (
                         <Text style={[styles.weatherModalValue, { color: colors.primary }]}>
-                          +{climatePercentage}% from weather
+                          +{climatePercentage}%
                           {climateAdjustment.reason ? ` (${climateAdjustment.reason.toLowerCase()})` : ''}
                         </Text>
-                      )}
-                      {stravaPercentage > 0 && (
-                        <Text style={[styles.weatherModalValue, { color: '#FC4C02' }]}>
-                          +{stravaPercentage}% from workout
-                          {stravaAdjustment?.reason ? ` (${stravaAdjustment.reason})` : ''}
-                        </Text>
-                      )}
-                      {combinedPercentage === 0 && (
+                      ) : (
                         <Text style={[styles.weatherModalValue, { color: colors.success }]}>
                           No adjustment needed
                         </Text>
                       )}
-                      {combinedPercentage > 0 && climatePercentage > 0 && stravaPercentage > 0 && (
-                        <Text style={[styles.weatherModalReason, { color: colors.textSecondary, marginTop: 4 }]}>
-                          Total: +{combinedPercentage}%
-                        </Text>
-                      )}
-                    </View>
-
-                    <View style={[styles.weatherModalDivider, { backgroundColor: colors.border }]} />
-
-                    <View style={styles.weatherModalSection}>
-                      <Text style={[styles.weatherModalLabel, { color: colors.textSecondary }]}>
-                        Your Goal Today
-                      </Text>
-                      <View style={styles.weatherModalGoalRow}>
-                        <Text style={[styles.weatherModalGoalBase, { color: colors.textSecondary }]}>
-                          {mlToDisplay(settings.dailyGoalMl, settings.unitSystem)} base
-                        </Text>
-                        {combinedPercentage > 0 && (
-                          <>
-                            <Text style={[styles.weatherModalGoalArrow, { color: colors.textTertiary }]}>
-                              →
-                            </Text>
-                            <Text style={[styles.weatherModalGoalAdjusted, { color: colors.primary }]}>
-                              {mlToDisplay(effectiveGoalMl, settings.unitSystem)}
-                            </Text>
-                          </>
-                        )}
-                      </View>
                     </View>
 
                     <TouchableOpacity
@@ -641,6 +629,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   weatherBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  combinedAdjustmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  combinedAdjustmentText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  combinedAdjustmentBadge: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  combinedAdjustmentBadgeText: {
     fontSize: 12,
     fontWeight: '600',
   },
