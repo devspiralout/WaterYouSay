@@ -23,7 +23,8 @@ import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
 import { mediumTap, lightTap } from '../utils/haptics';
 import { loadSounds, playWaterSound } from '../utils/sounds';
 import { ExpandableCalendar } from '../components/ExpandableCalendar';
-import { TrophyIcon } from '../components/TrophyIcon';
+// Trophy icon hidden for now
+// import { TrophyIcon } from '../components/TrophyIcon';
 import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
 import { WeatherAnimation } from '../components/WeatherAnimation';
@@ -199,9 +200,7 @@ export function HomeScreen() {
           <TouchableOpacity onPress={() => setSelectedDate(getTodayDateString())} style={styles.iconButton}>
             <WaterDropIcon size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Awards')} style={styles.iconButton}>
-            <TrophyIcon size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
+          {/* Trophy icon hidden for now */}
           <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
             <GearIcon size={24} color={colors.textSecondary} />
           </TouchableOpacity>
