@@ -8,11 +8,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { WaterProvider, useWater } from './src/context/WaterContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { HomeScreen } from './src/screens/HomeScreen';
-import { AchievementsScreen } from './src/screens/AchievementsScreen';
+// Achievement screen hidden for now
+// import { AchievementsScreen } from './src/screens/AchievementsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import { AchievementUnlockModal } from './src/components/AchievementUnlockModal';
-import { ACHIEVEMENTS } from './src/constants';
+// Achievement features hidden for now
+// import { AchievementUnlockModal } from './src/components/AchievementUnlockModal';
+// import { ACHIEVEMENTS } from './src/constants';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -28,19 +30,15 @@ function MainTabs() {
       }}
     >
       <Tab.Screen name="Today" component={HomeScreen} />
-      <Tab.Screen name="Awards" component={AchievementsScreen} />
+      {/* Awards screen hidden for now */}
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }
 
 function AppNavigator() {
-  const { state, pendingAchievement, clearPendingAchievement } = useWater();
+  const { state } = useWater();
   const { isDark } = useTheme();
-
-  const achievementToShow = pendingAchievement
-    ? ACHIEVEMENTS.find(a => a.id === pendingAchievement) || null
-    : null;
 
   return (
     <>
@@ -52,11 +50,7 @@ function AppNavigator() {
         )}
       </Stack.Navigator>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <AchievementUnlockModal
-        visible={!!pendingAchievement}
-        achievement={achievementToShow}
-        onDismiss={clearPendingAchievement}
-      />
+      {/* Achievement modal hidden for now */}
     </>
   );
 }

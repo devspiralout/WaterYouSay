@@ -19,7 +19,8 @@ import { RootTabParamList } from '../types';
 import { BarChart } from 'react-native-gifted-charts';
 import { useWater } from '../context/WaterContext';
 import { WaterDropIcon } from '../components/WaterDropIcon';
-import { TrophyIcon } from '../components/TrophyIcon';
+// Trophy icon hidden for now
+// import { TrophyIcon } from '../components/TrophyIcon';
 import { CalendarIcon } from '../components/CalendarIcon';
 import { useTheme } from '../context/ThemeContext';
 import { ACTIVITY_LEVELS } from '../constants';
@@ -28,17 +29,19 @@ import { mlToDisplay, formatWeight } from '../utils/units';
 import { clearAllData } from '../utils/storage';
 import { getCalculationBreakdown, getTodayDateString } from '../utils/calculations';
 import { MOCK_PRESETS } from '../utils/mockData';
-import { scheduleWaterReminders, requestNotificationPermissions } from '../utils/notifications';
+// Notifications hidden for now
+// import { scheduleWaterReminders, requestNotificationPermissions } from '../utils/notifications';
 import { useStravaAuth } from '../hooks/useStravaAuth';
 
 const screenWidth = Dimensions.get('window').width;
 
-const INTERVAL_OPTIONS = [
-  { value: 1, label: 'Every hour' },
-  { value: 2, label: 'Every 2 hours' },
-  { value: 3, label: 'Every 3 hours' },
-  { value: 4, label: 'Every 4 hours' },
-];
+// Reminders hidden for now
+// const INTERVAL_OPTIONS = [
+//   { value: 1, label: 'Every hour' },
+//   { value: 2, label: 'Every 2 hours' },
+//   { value: 3, label: 'Every 3 hours' },
+//   { value: 4, label: 'Every 4 hours' },
+// ];
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: 'Light' },
@@ -47,7 +50,7 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 export function SettingsScreen() {
-  const { state, setDailyGoal, setUnitSystem, setReminders, setQuickAddAmounts, setSoundEnabled, setThemeMode, setClimateEnabled, climateAdjustment, setStravaEnabled, setStravaConnected, stravaAdjustment, refreshStrava, resetOnboarding, loadMockData } = useWater();
+  const { state, setDailyGoal, setUnitSystem, setQuickAddAmounts, setSoundEnabled, setThemeMode, setClimateEnabled, climateAdjustment, setStravaEnabled, setStravaConnected, stravaAdjustment, refreshStrava, resetOnboarding, loadMockData } = useWater();
   const { colors } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const { settings, profile, history, todayLog } = state;
@@ -75,7 +78,8 @@ export function SettingsScreen() {
 
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [newGoal, setNewGoal] = useState(settings.dailyGoalMl.toString());
-  const [reminderModalVisible, setReminderModalVisible] = useState(false);
+  // Reminders hidden for now
+  // const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [quickAddModalVisible, setQuickAddModalVisible] = useState(false);
   const [insightsModalVisible, setInsightsModalVisible] = useState(false);
   const [editingAmounts, setEditingAmounts] = useState<string[]>(
@@ -207,34 +211,10 @@ export function SettingsScreen() {
     quickAddUnit: { color: colors.textSecondary },
   }), [colors]);
 
-  // Schedule reminders when settings change
-  useEffect(() => {
-    scheduleWaterReminders(settings.reminders);
-  }, [settings.reminders]);
-
-  const handleToggleReminders = async (enabled: boolean) => {
-    if (enabled) {
-      const hasPermission = await requestNotificationPermissions();
-      if (!hasPermission) {
-        Alert.alert(
-          'Notifications Disabled',
-          'Please enable notifications in your device settings to receive reminders.'
-        );
-        return;
-      }
-    }
-    setReminders({ ...settings.reminders, enabled });
-  };
-
-  const handleSetInterval = (intervalHours: number) => {
-    setReminders({ ...settings.reminders, intervalHours });
-    setReminderModalVisible(false);
-  };
-
-  const getIntervalLabel = () => {
-    const option = INTERVAL_OPTIONS.find(o => o.value === settings.reminders.intervalHours);
-    return option?.label || `Every ${settings.reminders.intervalHours} hours`;
-  };
+  // Reminders/notifications hidden for now
+  // useEffect(() => {
+  //   scheduleWaterReminders(settings.reminders);
+  // }, [settings.reminders]);
 
   const handleOpenQuickAddModal = () => {
     setEditingAmounts(settings.quickAddAmounts.map(a => a.toString()));
@@ -305,9 +285,7 @@ export function SettingsScreen() {
           <TouchableOpacity onPress={() => navigation.navigate('Today')} style={styles.iconButton}>
             <WaterDropIcon size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Awards')} style={styles.iconButton}>
-            <TrophyIcon size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
+          {/* Trophy icon hidden for now */}
         </View>
       </View>
 
@@ -401,40 +379,7 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        {/* Reminders */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>REMINDERS</Text>
-          <View style={[styles.reminderCard, dynamicStyles.reminderCard]}>
-            <View style={styles.reminderRow}>
-              <View>
-                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Water Reminders</Text>
-                <Text style={[styles.reminderSubtext, dynamicStyles.reminderSubtext]}>
-                  {settings.reminders.enabled
-                    ? `Active ${settings.reminders.startHour}:00 - ${settings.reminders.endHour}:00`
-                    : 'Receive notifications to drink water'}
-                </Text>
-              </View>
-              <Switch
-                value={settings.reminders.enabled}
-                onValueChange={handleToggleReminders}
-                trackColor={{ false: colors.border, true: colors.primaryMuted }}
-                thumbColor={settings.reminders.enabled ? colors.primary : colors.textTertiary}
-              />
-            </View>
-            {settings.reminders.enabled && (
-              <TouchableOpacity
-                style={[styles.intervalRow, dynamicStyles.intervalRow]}
-                onPress={() => setReminderModalVisible(true)}
-              >
-                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Frequency</Text>
-                <View style={styles.settingRight}>
-                  <Text style={[styles.settingValue, dynamicStyles.settingValue]}>{getIntervalLabel()}</Text>
-                  <Text style={[styles.chevron, dynamicStyles.chevron]}>›</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        {/* Reminders - hidden for now */}
 
         {/* Sound */}
         <View style={styles.section}>
@@ -765,48 +710,7 @@ export function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* Reminder Interval Modal */}
-      <Modal
-        visible={reminderModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setReminderModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, dynamicStyles.modalContent]}>
-            <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>Reminder Frequency</Text>
-            <View style={styles.intervalOptions}>
-              {INTERVAL_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.intervalOption,
-                    dynamicStyles.intervalOption,
-                    settings.reminders.intervalHours === option.value && dynamicStyles.intervalOptionActive,
-                  ]}
-                  onPress={() => handleSetInterval(option.value)}
-                >
-                  <Text
-                    style={[
-                      styles.intervalOptionText,
-                      dynamicStyles.intervalOptionText,
-                      settings.reminders.intervalHours === option.value && dynamicStyles.intervalOptionTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={[styles.modalCancelButton, dynamicStyles.modalCancelButton]}
-              onPress={() => setReminderModalVisible(false)}
-            >
-              <Text style={[styles.modalCancelText, dynamicStyles.modalCancelText]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Reminder Interval Modal - hidden for now */}
 
       {/* Quick Add Amounts Modal */}
       <Modal
