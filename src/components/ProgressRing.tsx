@@ -53,12 +53,6 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   const [justDeletedId, setJustDeletedId] = useState<string | null>(null);
   const deleteAnimProgress = useRef(new Animated.Value(0)).current;
 
-  // Track previous segment positions for slide animation
-  const [prevSegmentPositions, setPrevSegmentPositions] = useState<Map<string, { start: number; sweep: number }>>(new Map());
-  const slideAnimProgress = useRef(new Animated.Value(1)).current;
-  const [slideProgress, setSlideProgress] = useState(1); // 0 = old positions, 1 = new positions
-  const [skipSlideAnimation, setSkipSlideAnimation] = useState(false);
-
   // Expose clearSelection method to parent
   useImperativeHandle(ref, () => ({
     clearSelection: () => setSelectedSegment(null),
@@ -70,15 +64,8 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   const radius = (size - strokeWidth) / 2;
   const center = svgSize / 2;
 
-  // Animate progress changes (but skip animation after deletion)
+  // Animate progress changes
   useEffect(() => {
-    // If we just deleted, snap to new progress instantly
-    if (skipSlideAnimation) {
-      animationRef.setValue(progress);
-      setAnimatedProgress(progress);
-      return;
-    }
-
     const listener = animationRef.addListener(({ value }) => {
       setAnimatedProgress(value);
     });
@@ -93,7 +80,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     return () => {
       animationRef.removeListener(listener);
     };
-  }, [progress, animationRef, skipSlideAnimation]);
+  }, [progress, animationRef]);
 
 
   // Clear selection and justDeletedId when entries change
@@ -149,63 +136,6 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     });
   }, [entries, goalMl, colors, gapDegrees, goalMet, animatedProgress]);
 
-  // Trigger slide animation when segments change (after deletion)
-  useEffect(() => {
-    if (prevSegmentPositions.size > 0 && !deletingSegmentId && !skipSlideAnimation) {
-      // Check if any segment moved (not just added)
-      const hasMovement = segments.some(seg => {
-        const prev = prevSegmentPositions.get(seg.entry.id);
-        return prev && Math.abs(prev.start - seg.startAngle) > 0.1;
-      });
-
-      if (hasMovement) {
-        slideAnimProgress.setValue(0);
-        setSlideProgress(0);
-
-        const listener = slideAnimProgress.addListener(({ value }) => {
-          setSlideProgress(value);
-        });
-
-        Animated.timing(slideAnimProgress, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: false,
-        }).start(() => {
-          slideAnimProgress.removeListener(listener);
-          setSlideProgress(1);
-        });
-      }
-    }
-
-    // Reset skip flag
-    if (skipSlideAnimation) {
-      setSkipSlideAnimation(false);
-    }
-
-    // Store current positions for next change
-    const newPositions = new Map<string, { start: number; sweep: number }>();
-    segments.forEach(seg => {
-      newPositions.set(seg.entry.id, { start: seg.startAngle, sweep: seg.sweepAngle });
-    });
-    setPrevSegmentPositions(newPositions);
-  }, [segments, deletingSegmentId]);
-
-  // Get interpolated position for a segment (for slide animation)
-  const getInterpolatedPosition = useCallback((segment: typeof segments[0]) => {
-    const prev = prevSegmentPositions.get(segment.entry.id);
-
-    // If no previous position or animation complete, use current position
-    if (!prev || slideProgress >= 1) {
-      return { startAngle: segment.startAngle, sweepAngle: segment.sweepAngle };
-    }
-
-    // Interpolate from previous to current position
-    const startAngle = prev.start + (segment.startAngle - prev.start) * slideProgress;
-    const sweepAngle = prev.sweep + (segment.sweepAngle - prev.sweep) * slideProgress;
-
-    return { startAngle, sweepAngle };
-  }, [prevSegmentPositions, slideProgress]);
 
   // Convert angle to SVG arc path
   const createArcPath = (startAngle: number, sweepAngle: number, arcRadius: number) => {
@@ -259,9 +189,6 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     setDeletingSegmentId(segment.entry.id);
     setDeletingSegmentIndex(segment.index);
     setSelectedSegment(null);
-
-    // Skip slide animation (looks buggy)
-    setSkipSlideAnimation(true);
 
     // Reset animation value for new delete
     deleteAnimProgress.setValue(0);
@@ -361,8 +288,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
             // Dim segments when one is selected or being deleted
             const isDimmed = selectedSegment || deletingSegmentId;
 
-            // Use interpolated position for slide animation
-            const { startAngle, sweepAngle } = getInterpolatedPosition(segment);
+            const { startAngle, sweepAngle } = segment;
 
             return (
               <Path
@@ -382,7 +308,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
           {/* Selected segment - rendered on top */}
           {selectedSegment && segments[selectedSegment.index] && !deletingSegmentId && (() => {
             const segment = segments[selectedSegment.index];
-            const { startAngle, sweepAngle } = getInterpolatedPosition(segment);
+            const { startAngle, sweepAngle } = segment;
 
             return (
               <Path
