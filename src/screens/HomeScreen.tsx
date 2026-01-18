@@ -283,27 +283,6 @@ export function HomeScreen() {
             </View>
           )}
 
-          {/* Quick add water button - Centered under ring */}
-          {isViewingToday && !calendarExpanded && (
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.actionButtonMain,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
-                  opacity: progress >= 100 ? 0.4 : 1,
-                  marginTop: 24,
-                }
-              ]}
-              onPress={() => handleQuickAdd(quickAddAmounts[0]?.ml || 250)}
-              disabled={progress >= 100}
-              activeOpacity={0.7}
-            >
-              <WaterDropIcon size={28} color={colors.primary} />
-            </TouchableOpacity>
-          )}
-
           {/* Future day message */}
           {isViewingFuture && (
             <Text style={[styles.pastDayText, { color: colors.textTertiary, marginTop: 20 }]}>
@@ -316,48 +295,69 @@ export function HomeScreen() {
         {!isViewingToday && <View style={styles.bottomSpacer} />}
       </View>
 
-      {/* Bottom Action Buttons */}
+      {/* Bottom Action Buttons - Pyramid layout */}
       {isViewingToday && !calendarExpanded && (
-        <View style={styles.bottomButtonRow}>
-          {/* Add custom amount */}
+        <View style={styles.bottomButtonContainer}>
+          {/* Water drop - top of pyramid */}
           <TouchableOpacity
             style={[
               styles.actionButton,
+              styles.actionButtonLarge,
               {
                 backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
                 opacity: progress >= 100 ? 0.4 : 1,
               }
             ]}
-            onPress={() => setCustomModalVisible(true)}
+            onPress={() => handleQuickAdd(quickAddAmounts[0]?.ml || 250)}
             disabled={progress >= 100}
             activeOpacity={0.7}
           >
-            <Text style={[styles.actionButtonText, { color: colors.primary }]}>+</Text>
+            <WaterDropIcon size={36} color={colors.primary} />
           </TouchableOpacity>
 
-          {/* Clear all */}
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
-                opacity: todayLog.entries.length === 0 ? 0.4 : 1,
-              }
-            ]}
-            onPress={() => {
-              lightTap();
-              if (settings.soundEnabled) {
-                playClearAllSound();
-              }
-              clearToday();
-            }}
-            disabled={todayLog.entries.length === 0}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.actionButtonText, { color: '#000000' }]}>✕</Text>
-          </TouchableOpacity>
+          {/* Bottom row - + and X */}
+          <View style={styles.bottomButtonRow}>
+            {/* Add custom amount */}
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                  opacity: progress >= 100 ? 0.4 : 1,
+                }
+              ]}
+              onPress={() => setCustomModalVisible(true)}
+              disabled={progress >= 100}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.actionButtonText, { color: colors.primary }]}>+</Text>
+            </TouchableOpacity>
+
+            {/* Clear all */}
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                  opacity: todayLog.entries.length === 0 ? 0.4 : 1,
+                }
+              ]}
+              onPress={() => {
+                lightTap();
+                if (settings.soundEnabled) {
+                  playClearAllSound();
+                }
+                clearToday();
+              }}
+              disabled={todayLog.entries.length === 0}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.actionButtonText, { color: '#000000' }]}>x</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -648,12 +648,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  bottomButtonContainer: {
+    alignItems: 'center',
+    paddingBottom: 24,
+    gap: 12,
+  },
   bottomButtonRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 24,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
   },
   actionButtonRow: {
     flexDirection: 'row',
@@ -679,6 +682,11 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
+  },
+  actionButtonLarge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   actionButtonText: {
     fontSize: 24,
