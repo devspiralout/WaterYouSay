@@ -27,7 +27,6 @@ import { ExpandableCalendar } from '../components/ExpandableCalendar';
 import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
 import { WeatherAnimation } from '../components/WeatherAnimation';
-import { StravaWidget } from '../components/StravaWidget';
 import Svg, { Path } from 'react-native-svg';
 
 const STRAVA_ORANGE = '#FC4C02';
@@ -230,12 +229,59 @@ export function HomeScreen() {
             progress={progress}
             currentAmount={mlToDisplay(Math.min(selectedDayData.totalMl, effectiveGoalMl), settings.unitSystem)}
             goalAmount={mlToDisplay(effectiveGoalMl, settings.unitSystem)}
+            baseGoalAmount={isViewingToday && combinedPercentage > 0 ? mlToDisplay(settings.dailyGoalMl, settings.unitSystem) : undefined}
             entries={isViewingToday ? todayLog.entries : []}
             goalMl={effectiveGoalMl}
             unitSystem={settings.unitSystem}
             onDeleteEntry={isViewingToday ? removeEntry : undefined}
             onDeleteStart={isViewingToday ? handleDeleteStart : undefined}
           />
+
+          {/* Status Pills - Above action buttons */}
+          {isViewingToday && !calendarExpanded && (climateAdjustment || (stravaAdjustment && stravaAdjustment.activitiesCount > 0)) && (
+            <View style={styles.statusPillsRow}>
+              {climateAdjustment && (
+                <TouchableOpacity
+                  style={[styles.statusPill, { backgroundColor: colors.surface }]}
+                  onPress={() => {
+                    lightTap();
+                    setWeatherModalVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <WeatherAnimation temperature={climateAdjustment.temperature} size={18} />
+                  <Text style={[styles.statusPillText, { color: colors.text }]}>
+                    {climateAdjustment.temperature}°
+                  </Text>
+                  {climatePercentage > 0 && (
+                    <Text style={[styles.statusPillBadge, { color: colors.primary }]}>
+                      +{climatePercentage}%
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+              {stravaAdjustment && stravaAdjustment.activitiesCount > 0 && (
+                <TouchableOpacity
+                  style={[styles.statusPill, { backgroundColor: colors.surface }]}
+                  onPress={() => {
+                    lightTap();
+                    setStravaModalVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <StravaLogo size={16} />
+                  <Text style={[styles.statusPillText, { color: colors.text }]}>
+                    {stravaAdjustment.totalDurationMinutes}m
+                  </Text>
+                  {stravaAdjustment.percentage > 0 && (
+                    <Text style={[styles.statusPillBadge, { color: STRAVA_ORANGE }]}>
+                      +{stravaAdjustment.percentage}%
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {/* Action Buttons - Centered under ring */}
           {isViewingToday && !calendarExpanded && (
@@ -307,70 +353,6 @@ export function HomeScreen() {
             </Text>
           )}
         </View>
-
-        {/* Widgets - Bottom (only on today) */}
-        {isViewingToday && (
-          <TouchableWithoutFeedback onPress={() => progressRingRef.current?.clearSelection()}>
-            <View style={[styles.quickAddContainer, { opacity: !calendarExpanded ? 1 : 0 }]} pointerEvents={!calendarExpanded ? 'auto' : 'none'}>
-            {/* Strava Widget */}
-            {stravaAdjustment && stravaAdjustment.activitiesCount > 0 && (
-              <StravaWidget
-                adjustment={stravaAdjustment}
-                onPress={() => {
-                  lightTap();
-                  setStravaModalVisible(true);
-                }}
-              />
-            )}
-            {/* Weather Widget */}
-            {climateAdjustment && (
-              <TouchableOpacity
-                style={[styles.weatherWidget, { backgroundColor: colors.surface }]}
-                onPress={() => {
-                  lightTap();
-                  setWeatherModalVisible(true);
-                }}
-                activeOpacity={0.7}
-              >
-                <WeatherAnimation temperature={climateAdjustment.temperature} size={36} />
-                <View style={styles.weatherContent}>
-                  <View style={styles.weatherTempRow}>
-                    <Text style={[styles.weatherTemp, { color: colors.text }]}>
-                      {climateAdjustment.temperature}°
-                    </Text>
-                    <Text style={[styles.weatherHighLow, { color: colors.textSecondary }]}>
-                      H:{climateAdjustment.temperatureHigh}° L:{climateAdjustment.temperatureLow}°
-                    </Text>
-                  </View>
-                  <Text style={[styles.weatherLocation, { color: colors.textSecondary }]} numberOfLines={1}>
-                    {climateAdjustment.locationName}
-                  </Text>
-                </View>
-                {climatePercentage > 0 && (
-                  <View style={[styles.weatherBadge, { backgroundColor: colors.primary + '20' }]}>
-                    <Text style={[styles.weatherBadgeText, { color: colors.primary }]}>
-                      +{climatePercentage}%
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
-            {/* Combined adjustment indicator */}
-            {combinedPercentage > 0 && (
-              <View style={styles.combinedAdjustmentRow}>
-                <Text style={[styles.combinedAdjustmentText, { color: colors.textSecondary }]}>
-                  Today's goal: {mlToDisplay(effectiveGoalMl, settings.unitSystem)}
-                </Text>
-                <View style={[styles.combinedAdjustmentBadge, { backgroundColor: colors.primary + '15' }]}>
-                  <Text style={[styles.combinedAdjustmentBadgeText, { color: colors.primary }]}>
-                    +{combinedPercentage}%
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-        </TouchableWithoutFeedback>
-        )}
 
         {/* Spacer for past/future days to match today's button area height */}
         {!isViewingToday && <View style={styles.bottomSpacer} />}
@@ -611,6 +593,29 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  statusPillsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 20,
+    marginBottom: 4,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 6,
+  },
+  statusPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusPillBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -633,72 +638,8 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
   },
-  quickAddContainer: {
-    paddingBottom: 24,
-    minHeight: 160,
-    justifyContent: 'flex-end',
-  },
   bottomSpacer: {
     height: 160,
-  },
-  weatherWidget: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    marginBottom: 16,
-    gap: 12,
-  },
-  weatherContent: {
-    flex: 1,
-  },
-  weatherTempRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-  },
-  weatherTemp: {
-    fontSize: 22,
-    fontWeight: '600',
-  },
-  weatherHighLow: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  weatherLocation: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  weatherBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  weatherBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  combinedAdjustmentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  combinedAdjustmentText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  combinedAdjustmentBadge: {
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  combinedAdjustmentBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   pastDayText: {
     fontSize: 16,

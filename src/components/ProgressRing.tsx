@@ -14,6 +14,7 @@ interface ProgressRingProps {
   strokeWidth?: number;
   currentAmount: string;
   goalAmount: string;
+  baseGoalAmount?: string;
   entries?: WaterEntry[];
   goalMl?: number;
   unitSystem?: 'metric' | 'imperial';
@@ -36,6 +37,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   strokeWidth = 12,
   currentAmount,
   goalAmount,
+  baseGoalAmount,
   entries = [],
   goalMl = 2500,
   unitSystem = 'metric',
@@ -60,7 +62,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   }));
 
   const expandedStrokeWidth = strokeWidth + 6;
-  const padding = (expandedStrokeWidth - strokeWidth) / 2; // Extra space for expanded segments
+  const padding = (expandedStrokeWidth - strokeWidth) / 2;
   const svgSize = size + padding * 2;
   const radius = (size - strokeWidth) / 2;
   const center = svgSize / 2;
@@ -249,6 +251,9 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   };
 
   // Determine what to show in center
+  const hasAdjustment = baseGoalAmount && baseGoalAmount !== goalAmount;
+  const goalDisplay = hasAdjustment ? `of ${baseGoalAmount} (${goalAmount})` : `of ${goalAmount}`;
+
   const centerContent = useMemo(() => {
     if (selectedSegment) {
       return {
@@ -260,16 +265,16 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     if (goalMet) {
       return {
         main: currentAmount,
-        sub: `of ${goalAmount}`,
+        sub: goalDisplay,
         detail: entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : '',
       };
     }
     return {
       main: currentAmount,
-      sub: `of ${goalAmount}`,
+      sub: goalDisplay,
       detail: entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : '',
     };
-  }, [selectedSegment, currentAmount, goalAmount, entries.length, unitSystem, goalMet]);
+  }, [selectedSegment, currentAmount, goalDisplay, entries.length, unitSystem, goalMet]);
 
   return (
     <TouchableOpacity
