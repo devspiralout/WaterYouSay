@@ -52,6 +52,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   const [deletingSegmentIndex, setDeletingSegmentIndex] = useState<number | null>(null);
   const [justDeletedId, setJustDeletedId] = useState<string | null>(null);
   const deleteAnimProgress = useRef(new Animated.Value(0)).current;
+  const skipNextProgressAnim = useRef(false);
 
   // Expose clearSelection method to parent
   useImperativeHandle(ref, () => ({
@@ -64,8 +65,16 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   const radius = (size - strokeWidth) / 2;
   const center = svgSize / 2;
 
-  // Animate progress changes
+  // Animate progress changes (skip animation after deletion)
   useEffect(() => {
+    if (skipNextProgressAnim.current) {
+      // Snap immediately after deletion
+      skipNextProgressAnim.current = false;
+      animationRef.setValue(progress);
+      setAnimatedProgress(progress);
+      return;
+    }
+
     const listener = animationRef.addListener(({ value }) => {
       setAnimatedProgress(value);
     });
@@ -217,7 +226,9 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
       // Clear deleting state first (keeps opacity at 0 since we don't reset deleteAnimProgress)
       setDeletingSegmentId(null);
       setDeletingSegmentIndex(null);
-      // Then remove the entry (triggers slide animation)
+      // Skip the next progress animation so segments snap immediately
+      skipNextProgressAnim.current = true;
+      // Then remove the entry
       onDeleteEntry(segment.entry.id);
     });
   }, [onDeleteEntry, onDeleteStart, deletingSegmentId, deleteAnimProgress]);

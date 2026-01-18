@@ -16,7 +16,6 @@ import { RootTabParamList } from '../types';
 import { useWater } from '../context/WaterContext';
 import { useTheme } from '../context/ThemeContext';
 import { ProgressRing, ProgressRingRef } from '../components/ProgressRing';
-import { WaterButton, CustomAmountButton } from '../components/WaterButton';
 import { WaterBackground } from '../components/WaterBackground';
 import { calculateProgress, getTodayDateString, isToday, isFutureDate, formatDateString } from '../utils/calculations';
 import { mlToDisplay, getQuickAddAmounts } from '../utils/units';
@@ -51,7 +50,7 @@ function StravaLogo({ size = 24 }: { size?: number }) {
 
 export function HomeScreen() {
   const { state, addWater, removeEntry, clearToday, climateAdjustment, stravaAdjustment } = useWater();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [weatherModalVisible, setWeatherModalVisible] = useState(false);
@@ -238,10 +237,54 @@ export function HomeScreen() {
             onDeleteStart={isViewingToday ? handleDeleteStart : undefined}
           />
 
-           {/* Clear All Button */}
-           {isViewingToday && todayLog.entries.length > 0 && (
+          {/* Action Buttons - Centered under ring */}
+          {isViewingToday && !calendarExpanded && (
+            <View style={styles.actionButtonRow}>
+              {/* Add custom amount */}
               <TouchableOpacity
-                style={styles.clearButton}
+                style={[
+                  styles.actionButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                    opacity: progress >= 100 ? 0.4 : 1,
+                  }
+                ]}
+                onPress={() => setCustomModalVisible(true)}
+                disabled={progress >= 100}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.actionButtonText, { color: colors.primary }]}>+</Text>
+              </TouchableOpacity>
+
+              {/* Quick add favorite amount */}
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  styles.actionButtonMain,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                    opacity: progress >= 100 ? 0.4 : 1,
+                  }
+                ]}
+                onPress={() => handleQuickAdd(quickAddAmounts[0]?.ml || 250)}
+                disabled={progress >= 100}
+                activeOpacity={0.7}
+              >
+                <WaterDropIcon size={28} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Clear all */}
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                    opacity: todayLog.entries.length === 0 ? 0.4 : 1,
+                  }
+                ]}
                 onPress={() => {
                   lightTap();
                   if (settings.soundEnabled) {
@@ -249,12 +292,13 @@ export function HomeScreen() {
                   }
                   clearToday();
                 }}
+                disabled={todayLog.entries.length === 0}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.clearButtonText, { color: colors.textTertiary }]}>
-                  Clear All
-                </Text>
+                <Text style={[styles.actionButtonText, { color: '#000000' }]}>✕</Text>
               </TouchableOpacity>
-            )}
+            </View>
+          )}
 
           {/* Future day message */}
           {isViewingFuture && (
@@ -264,7 +308,7 @@ export function HomeScreen() {
           )}
         </View>
 
-        {/* Weather Widget & Quick Add Buttons - Bottom (only on today) */}
+        {/* Widgets - Bottom (only on today) */}
         {isViewingToday && (
           <TouchableWithoutFeedback onPress={() => progressRingRef.current?.clearSelection()}>
             <View style={[styles.quickAddContainer, { opacity: !calendarExpanded ? 1 : 0 }]} pointerEvents={!calendarExpanded ? 'auto' : 'none'}>
@@ -324,20 +368,6 @@ export function HomeScreen() {
                 </View>
               </View>
             )}
-            <View style={styles.buttonRow}>
-              {quickAddAmounts.map(({ ml, display }) => (
-                <WaterButton
-                  key={ml}
-                  amount={display}
-                  onPress={() => handleQuickAdd(ml)}
-                  disabled={progress >= 100}
-                />
-              ))}
-              <CustomAmountButton
-                onPress={() => setCustomModalVisible(true)}
-                disabled={progress >= 100}
-              />
-            </View>
           </View>
         </TouchableWithoutFeedback>
         )}
@@ -356,6 +386,25 @@ export function HomeScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, dynamicStyles.modalContent]}>
             <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>Add Water</Text>
+
+            {/* Quick Add Options */}
+            <View style={styles.quickAddRow}>
+              {quickAddAmounts.map(({ ml, display }) => (
+                <TouchableOpacity
+                  key={ml}
+                  style={[styles.quickAddOption, { backgroundColor: colors.background }]}
+                  onPress={() => {
+                    handleQuickAdd(ml);
+                    setCustomModalVisible(false);
+                  }}
+                >
+                  <Text style={[styles.quickAddOptionText, { color: colors.text }]}>{display}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.orDivider, { color: colors.textTertiary }]}>or enter custom</Text>
+
             <View style={styles.customInputContainer}>
               <TextInput
                 style={[styles.customInput, dynamicStyles.customInput]}
@@ -364,7 +413,6 @@ export function HomeScreen() {
                 keyboardType="numeric"
                 placeholder="0"
                 placeholderTextColor={colors.textTertiary}
-                autoFocus
               />
               <Text style={[styles.customUnit, dynamicStyles.customUnit]}>
                 {settings.unitSystem === 'metric' ? 'ml' : 'oz'}
@@ -656,22 +704,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  buttonRow: {
+  actionButtonRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 24,
   },
-  clearButton: {
-    marginTop: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignSelf: 'center',
+  actionButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  clearButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
+  actionButtonMain: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  actionButtonText: {
+    fontSize: 24,
+    fontWeight: '300',
   },
   modalOverlay: {
     flex: 1,
@@ -690,8 +750,30 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     letterSpacing: -0.3,
+  },
+  quickAddRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  quickAddOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  quickAddOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  orDivider: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   customInputContainer: {
     flexDirection: 'row',
