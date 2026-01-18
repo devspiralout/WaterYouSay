@@ -295,10 +295,27 @@ export function HomeScreen() {
         {!isViewingToday && <View style={styles.bottomSpacer} />}
       </View>
 
-      {/* Bottom Action Buttons - Pyramid layout */}
+      {/* Bottom Action Buttons */}
       {isViewingToday && !calendarExpanded && (
-        <View style={styles.bottomButtonContainer}>
-          {/* Water drop - top of pyramid */}
+        <View style={styles.bottomButtonRow}>
+          {/* Add custom amount */}
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                opacity: progress >= 100 ? 0.4 : 1,
+              }
+            ]}
+            onPress={() => setCustomModalVisible(true)}
+            disabled={progress >= 100}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionButtonText, { color: colors.primary }]}>+</Text>
+          </TouchableOpacity>
+
+          {/* Water drop - quick add */}
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -316,48 +333,28 @@ export function HomeScreen() {
             <WaterDropIcon size={36} color={colors.primary} />
           </TouchableOpacity>
 
-          {/* Bottom row - + and X */}
-          <View style={styles.bottomButtonRow}>
-            {/* Add custom amount */}
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
-                  opacity: progress >= 100 ? 0.4 : 1,
-                }
-              ]}
-              onPress={() => setCustomModalVisible(true)}
-              disabled={progress >= 100}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.actionButtonText, { color: colors.primary }]}>+</Text>
-            </TouchableOpacity>
-
-            {/* Clear all */}
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
-                  opacity: todayLog.entries.length === 0 ? 0.4 : 1,
-                }
-              ]}
-              onPress={() => {
-                lightTap();
-                if (settings.soundEnabled) {
-                  playClearAllSound();
-                }
-                clearToday();
-              }}
-              disabled={todayLog.entries.length === 0}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.actionButtonText, { color: '#000000' }]}>x</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Clear all */}
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                opacity: todayLog.entries.length === 0 ? 0.4 : 1,
+              }
+            ]}
+            onPress={() => {
+              lightTap();
+              if (settings.soundEnabled) {
+                playClearAllSound();
+              }
+              clearToday();
+            }}
+            disabled={todayLog.entries.length === 0}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionButtonText, { color: '#000000' }]}>x</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -648,15 +645,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  bottomButtonContainer: {
-    alignItems: 'center',
-    paddingBottom: 24,
-    gap: 12,
-  },
   bottomButtonRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 24,
+    alignItems: 'center',
+    gap: 20,
+    paddingBottom: 24,
   },
   actionButtonRow: {
     flexDirection: 'row',
