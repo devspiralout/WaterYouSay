@@ -64,15 +64,29 @@ export function HomeScreen() {
 
   // Animation for add card
   const addCardAnim = useRef(new Animated.Value(0)).current;
+  const [addCardVisible, setAddCardVisible] = useState(false);
 
   const toggleAddCard = (expand: boolean) => {
-    setAddCardExpanded(expand);
-    Animated.timing(addCardAnim, {
-      toValue: expand ? 1 : 0,
-      duration: 250,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
+    if (expand) {
+      setAddCardVisible(true);
+      setAddCardExpanded(true);
+      Animated.timing(addCardAnim, {
+        toValue: 1,
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      setAddCardExpanded(false);
+      Animated.timing(addCardAnim, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        setAddCardVisible(false);
+      });
+    }
   };
 
   const { todayLog, settings, history } = state;
@@ -172,7 +186,6 @@ export function HomeScreen() {
       }
       addWater(amount);
       setCustomAmount('');
-      toggleAddCard(false);
     }
   };
 
@@ -298,7 +311,7 @@ export function HomeScreen() {
       </View>
 
       {/* Add Water Card - Inline with animation */}
-      {isViewingToday && !calendarExpanded && addCardExpanded && (
+      {isViewingToday && !calendarExpanded && addCardVisible && (
         <Animated.View
           style={[
             styles.addCard,
@@ -327,10 +340,7 @@ export function HomeScreen() {
                     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                   },
                 ]}
-                onPress={() => {
-                  handleQuickAdd(ml);
-                  toggleAddCard(false);
-                }}
+                onPress={() => handleQuickAdd(ml)}
               >
                 <Text style={[styles.quickAddOptionText, { color: colors.text }]}>{display}</Text>
               </TouchableOpacity>
