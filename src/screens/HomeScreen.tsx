@@ -26,6 +26,7 @@ import { ExpandableCalendar } from '../components/ExpandableCalendar';
 // import { TrophyIcon } from '../components/TrophyIcon';
 import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
+import { CloseIcon } from '../components/CloseIcon';
 import { WeatherAnimation } from '../components/WeatherAnimation';
 import Svg, { Path } from 'react-native-svg';
 
@@ -200,15 +201,9 @@ export function HomeScreen() {
       {/* Sticky Header */}
       <View style={styles.header}>
         <Text style={[styles.greeting, dynamicStyles.greeting]}>{headerTitle}</Text>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => setSelectedDate(getTodayDateString())} style={styles.iconButton}>
-            <WaterDropIcon size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          {/* Trophy icon hidden for now */}
-          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
-            <GearIcon size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
+          <GearIcon size={24} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       {/* Expandable Calendar */}
@@ -312,7 +307,7 @@ export function HomeScreen() {
             disabled={progress >= 100}
             activeOpacity={0.7}
           >
-            <Text style={[styles.actionButtonText, { color: colors.primary }]}>+</Text>
+            <Text style={[styles.actionButtonText, { color: colors.text }]}>+</Text>
           </TouchableOpacity>
 
           {/* Water drop - quick add */}
@@ -353,7 +348,7 @@ export function HomeScreen() {
             disabled={todayLog.entries.length === 0}
             activeOpacity={0.7}
           >
-            <Text style={[styles.actionButtonText, { color: '#000000' }]}>x</Text>
+            <CloseIcon size={18} color={colors.text} />
           </TouchableOpacity>
         </View>
       )}
@@ -629,11 +624,6 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '700',
     letterSpacing: -0.5,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
   },
   iconButton: {
     padding: 8,
