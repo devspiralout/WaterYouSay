@@ -52,7 +52,7 @@ export function HomeScreen() {
   const { state, addWater, removeEntry, clearToday, climateAdjustment, stravaAdjustment } = useWater();
   const { colors, isDark } = useTheme();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
-  const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [addCardExpanded, setAddCardExpanded] = useState(false);
   const [weatherModalVisible, setWeatherModalVisible] = useState(false);
   const [stravaModalVisible, setStravaModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
@@ -132,15 +132,7 @@ export function HomeScreen() {
   // Dynamic styles based on theme
   const dynamicStyles = useMemo(() => ({
     container: { backgroundColor: colors.background },
-    greeting: { color: colors.text },
     modalContent: { backgroundColor: colors.surface },
-    modalTitle: { color: colors.text },
-    customInput: { backgroundColor: colors.background, color: colors.text },
-    customUnit: { color: colors.textTertiary },
-    modalCancelButton: { backgroundColor: colors.background },
-    modalCancelText: { color: colors.textSecondary },
-    modalAddButton: { backgroundColor: colors.primary },
-    modalAddButtonDisabled: { backgroundColor: colors.border },
   }), [colors]);
 
   // Load sounds on mount
@@ -165,7 +157,7 @@ export function HomeScreen() {
       }
       addWater(amount);
       setCustomAmount('');
-      setCustomModalVisible(false);
+      setAddCardExpanded(false);
     }
   };
 
@@ -200,7 +192,7 @@ export function HomeScreen() {
 
       {/* Sticky Header */}
       <View style={styles.header}>
-        <Text style={[styles.greeting, dynamicStyles.greeting]}>{headerTitle}</Text>
+        <Text style={[styles.greeting, { color: colors.text }]}>{headerTitle}</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
           <GearIcon size={24} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -290,6 +282,50 @@ export function HomeScreen() {
         {!isViewingToday && <View style={styles.bottomSpacer} />}
       </View>
 
+      {/* Add Water Card - Inline */}
+      {isViewingToday && !calendarExpanded && addCardExpanded && (
+        <View style={[styles.addCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.quickAddRow}>
+            {quickAddAmounts.map(({ ml, display }) => (
+              <TouchableOpacity
+                key={ml}
+                style={[styles.quickAddOption, { backgroundColor: colors.background }]}
+                onPress={() => {
+                  handleQuickAdd(ml);
+                  setAddCardExpanded(false);
+                }}
+              >
+                <Text style={[styles.quickAddOptionText, { color: colors.text }]}>{display}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.customInputRow}>
+            <TextInput
+              style={[styles.inlineCustomInput, { backgroundColor: colors.background, color: colors.text }]}
+              value={customAmount}
+              onChangeText={setCustomAmount}
+              keyboardType="numeric"
+              placeholder="Custom"
+              placeholderTextColor={colors.textTertiary}
+            />
+            <Text style={[styles.customUnit, { color: colors.textTertiary }]}>
+              {settings.unitSystem === 'metric' ? 'ml' : 'oz'}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.inlineAddButton,
+                { backgroundColor: customAmount ? colors.primary : colors.border }
+              ]}
+              onPress={handleCustomAdd}
+              disabled={!customAmount}
+            >
+              <Text style={styles.inlineAddButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Bottom Action Buttons */}
       {isViewingToday && !calendarExpanded && (
         <View style={styles.bottomButtonRow}>
@@ -303,7 +339,10 @@ export function HomeScreen() {
                 opacity: progress >= 100 ? 0.4 : 1,
               }
             ]}
-            onPress={() => setCustomModalVisible(true)}
+            onPress={() => {
+              lightTap();
+              setAddCardExpanded(!addCardExpanded);
+            }}
             disabled={progress >= 100}
             activeOpacity={0.7}
           >
@@ -352,74 +391,6 @@ export function HomeScreen() {
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Custom Amount Modal */}
-      <Modal
-        visible={customModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCustomModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, dynamicStyles.modalContent]}>
-            <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>Add Water</Text>
-
-            {/* Quick Add Options */}
-            <View style={styles.quickAddRow}>
-              {quickAddAmounts.map(({ ml, display }) => (
-                <TouchableOpacity
-                  key={ml}
-                  style={[styles.quickAddOption, { backgroundColor: colors.background }]}
-                  onPress={() => {
-                    handleQuickAdd(ml);
-                    setCustomModalVisible(false);
-                  }}
-                >
-                  <Text style={[styles.quickAddOptionText, { color: colors.text }]}>{display}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={[styles.orDivider, { color: colors.textTertiary }]}>or enter custom</Text>
-
-            <View style={styles.customInputContainer}>
-              <TextInput
-                style={[styles.customInput, dynamicStyles.customInput]}
-                value={customAmount}
-                onChangeText={setCustomAmount}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={colors.textTertiary}
-              />
-              <Text style={[styles.customUnit, dynamicStyles.customUnit]}>
-                {settings.unitSystem === 'metric' ? 'ml' : 'oz'}
-              </Text>
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalCancelButton, dynamicStyles.modalCancelButton]}
-                onPress={() => {
-                  setCustomAmount('');
-                  setCustomModalVisible(false);
-                }}
-              >
-                <Text style={[styles.modalCancelText, dynamicStyles.modalCancelText]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalAddButton,
-                  dynamicStyles.modalAddButton,
-                  !customAmount && [styles.modalAddButtonDisabled, dynamicStyles.modalAddButtonDisabled],
-                ]}
-                onPress={handleCustomAdd}
-                disabled={!customAmount}
-              >
-                <Text style={styles.modalAddText}>Add</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Strava Details Modal */}
       <Modal
@@ -642,6 +613,36 @@ const styles = StyleSheet.create({
     gap: 20,
     paddingBottom: 24,
   },
+  addCard: {
+    marginHorizontal: 24,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 16,
+    gap: 12,
+  },
+  customInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  inlineCustomInput: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    fontSize: 17,
+    fontWeight: '500',
+  },
+  inlineAddButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  inlineAddButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   actionButtonRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -700,7 +701,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 10,
-    marginBottom: 16,
   },
   quickAddOption: {
     paddingVertical: 12,
