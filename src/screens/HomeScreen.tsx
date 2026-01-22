@@ -8,6 +8,8 @@ import {
   TextInput,
   PanResponder,
   TouchableWithoutFeedback,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -59,6 +61,19 @@ export function HomeScreen() {
   const progressRingRef = useRef<ProgressRingRef>(null);
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+
+  // Animation for add card
+  const addCardAnim = useRef(new Animated.Value(0)).current;
+
+  const toggleAddCard = (expand: boolean) => {
+    setAddCardExpanded(expand);
+    Animated.timing(addCardAnim, {
+      toValue: expand ? 1 : 0,
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
 
   const { todayLog, settings, history } = state;
   const isViewingToday = isToday(selectedDate);
@@ -157,7 +172,7 @@ export function HomeScreen() {
       }
       addWater(amount);
       setCustomAmount('');
-      setAddCardExpanded(false);
+      toggleAddCard(false);
     }
   };
 
@@ -282,17 +297,39 @@ export function HomeScreen() {
         {!isViewingToday && <View style={styles.bottomSpacer} />}
       </View>
 
-      {/* Add Water Card - Inline */}
+      {/* Add Water Card - Inline with animation */}
       {isViewingToday && !calendarExpanded && addCardExpanded && (
-        <View style={[styles.addCard, { backgroundColor: colors.surface }]}>
+        <Animated.View
+          style={[
+            styles.addCard,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+            },
+            {
+              opacity: addCardAnim,
+              transform: [{
+                translateY: addCardAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              }],
+            },
+          ]}
+        >
           <View style={styles.quickAddRow}>
             {quickAddAmounts.map(({ ml, display }) => (
               <TouchableOpacity
                 key={ml}
-                style={[styles.quickAddOption, { backgroundColor: colors.background }]}
+                style={[
+                  styles.quickAddOption,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  },
+                ]}
                 onPress={() => {
                   handleQuickAdd(ml);
-                  setAddCardExpanded(false);
+                  toggleAddCard(false);
                 }}
               >
                 <Text style={[styles.quickAddOptionText, { color: colors.text }]}>{display}</Text>
@@ -302,7 +339,13 @@ export function HomeScreen() {
 
           <View style={styles.customInputRow}>
             <TextInput
-              style={[styles.inlineCustomInput, { backgroundColor: colors.background, color: colors.text }]}
+              style={[
+                styles.inlineCustomInput,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  color: colors.text,
+                },
+              ]}
               value={customAmount}
               onChangeText={setCustomAmount}
               keyboardType="numeric"
@@ -323,7 +366,7 @@ export function HomeScreen() {
               <Text style={styles.inlineAddButtonText}>Add</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {/* Bottom Action Buttons */}
@@ -341,12 +384,27 @@ export function HomeScreen() {
             ]}
             onPress={() => {
               lightTap();
-              setAddCardExpanded(!addCardExpanded);
+              toggleAddCard(!addCardExpanded);
             }}
             disabled={progress >= 100}
             activeOpacity={0.7}
           >
-            <Text style={[styles.actionButtonText, { color: colors.text }]}>+</Text>
+            <Animated.Text
+              style={[
+                styles.actionButtonText,
+                { color: colors.text },
+                {
+                  transform: [{
+                    rotate: addCardAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '45deg'],
+                    }),
+                  }],
+                },
+              ]}
+            >
+              +
+            </Animated.Text>
           </TouchableOpacity>
 
           {/* Water drop - quick add */}
@@ -617,8 +675,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginBottom: 16,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 20,
+    borderWidth: 1,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
   },
   customInputRow: {
     flexDirection: 'row',
