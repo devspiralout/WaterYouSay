@@ -68,64 +68,84 @@ export function HomeScreen() {
   const addCardAnim = useRef(new Animated.Value(0)).current;
   const [addCardVisible, setAddCardVisible] = useState(false);
 
-  const toggleAddCard = (expand: boolean) => {
-    if (expand) {
-      // Close entry card if open
-      if (selectedEntry) {
-        toggleEntryCard(null);
-      }
-      setAddCardVisible(true);
-      setAddCardExpanded(true);
-      Animated.timing(addCardAnim, {
-        toValue: 1,
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      setAddCardExpanded(false);
-      Animated.timing(addCardAnim, {
-        toValue: 0,
-        duration: 200,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }).start(() => {
-        setAddCardVisible(false);
-      });
-    }
-  };
-
   // Animation for entry details card
   const entryCardAnim = useRef(new Animated.Value(0)).current;
   const carouselSlideAnim = useRef(new Animated.Value(0)).current;
   const [selectedEntry, setSelectedEntry] = useState<{ entry: WaterEntry; index: number } | null>(null);
   const [entryCardVisible, setEntryCardVisible] = useState(false);
 
+  const openAddCard = () => {
+    setAddCardVisible(true);
+    setAddCardExpanded(true);
+    Animated.spring(addCardAnim, {
+      toValue: 1,
+      tension: 100,
+      friction: 15,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeAddCard = (onComplete?: () => void) => {
+    setAddCardExpanded(false);
+    Animated.timing(addCardAnim, {
+      toValue: 0,
+      duration: 150,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setAddCardVisible(false);
+      onComplete?.();
+    });
+  };
+
+  const openEntryCard = (entry: { entry: WaterEntry; index: number }) => {
+    setSelectedEntry(entry);
+    setEntryCardVisible(true);
+    carouselSlideAnim.setValue(0);
+    Animated.spring(entryCardAnim, {
+      toValue: 1,
+      tension: 100,
+      friction: 15,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeEntryCard = (onComplete?: () => void) => {
+    Animated.timing(entryCardAnim, {
+      toValue: 0,
+      duration: 150,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setEntryCardVisible(false);
+      setSelectedEntry(null);
+      onComplete?.();
+    });
+  };
+
+  const toggleAddCard = (expand: boolean) => {
+    if (expand) {
+      // Close entry card first if open, then open add card
+      if (entryCardVisible) {
+        closeEntryCard(() => openAddCard());
+      } else {
+        openAddCard();
+      }
+    } else {
+      closeAddCard();
+    }
+  };
+
   const toggleEntryCard = (entry: { entry: WaterEntry; index: number } | null) => {
     if (entry) {
-      // Close add card if open
-      if (addCardExpanded) {
-        toggleAddCard(false);
+      // Close add card first if open, then open entry card
+      if (addCardVisible) {
+        closeAddCard(() => openEntryCard(entry));
+      } else {
+        openEntryCard(entry);
       }
-      setSelectedEntry(entry);
-      setEntryCardVisible(true);
-      carouselSlideAnim.setValue(0);
-      Animated.timing(entryCardAnim, {
-        toValue: 1,
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
     } else {
-      Animated.timing(entryCardAnim, {
-        toValue: 0,
-        duration: 200,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }).start(() => {
-        setEntryCardVisible(false);
-        setSelectedEntry(null);
-      });
+      closeEntryCard();
     }
   };
 
