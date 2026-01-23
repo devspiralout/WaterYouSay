@@ -29,7 +29,9 @@ import { ExpandableCalendar } from '../components/ExpandableCalendar';
 import { WaterDropIcon } from '../components/WaterDropIcon';
 import { GearIcon } from '../components/GearIcon';
 import { CloseIcon } from '../components/CloseIcon';
+import { TrashIcon } from '../components/TrashIcon';
 import { WeatherAnimation } from '../components/WeatherAnimation';
+import { WaterEntry } from '../types';
 import Svg, { Path } from 'react-native-svg';
 
 const STRAVA_ORANGE = '#FC4C02';
@@ -68,6 +70,10 @@ export function HomeScreen() {
 
   const toggleAddCard = (expand: boolean) => {
     if (expand) {
+      // Close entry card if open
+      if (selectedEntry) {
+        toggleEntryCard(null);
+      }
       setAddCardVisible(true);
       setAddCardExpanded(true);
       Animated.timing(addCardAnim, {
@@ -87,6 +93,66 @@ export function HomeScreen() {
         setAddCardVisible(false);
       });
     }
+  };
+
+  // Animation for entry details card
+  const entryCardAnim = useRef(new Animated.Value(0)).current;
+  const [selectedEntry, setSelectedEntry] = useState<{ entry: WaterEntry; index: number } | null>(null);
+  const [entryCardVisible, setEntryCardVisible] = useState(false);
+
+  const toggleEntryCard = (entry: { entry: WaterEntry; index: number } | null) => {
+    if (entry) {
+      // Close add card if open
+      if (addCardExpanded) {
+        toggleAddCard(false);
+      }
+      setSelectedEntry(entry);
+      setEntryCardVisible(true);
+      Animated.timing(entryCardAnim, {
+        toValue: 1,
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(entryCardAnim, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        setEntryCardVisible(false);
+        setSelectedEntry(null);
+      });
+    }
+  };
+
+  const handleSelectEntry = (entry: WaterEntry, index: number) => {
+    if (index === -1) {
+      // Deselect
+      toggleEntryCard(null);
+    } else {
+      toggleEntryCard({ entry, index });
+    }
+  };
+
+  const handleDeleteSelectedEntry = () => {
+    if (selectedEntry) {
+      if (settings.soundEnabled) {
+        playRemoveSound();
+      }
+      removeEntry(selectedEntry.entry.id);
+      toggleEntryCard(null);
+    }
+  };
+
+  // Format time for display
+  const formatTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
   };
 
   const { todayLog, settings, history } = state;
@@ -250,6 +316,8 @@ export function HomeScreen() {
             unitSystem={settings.unitSystem}
             onDeleteEntry={isViewingToday ? removeEntry : undefined}
             onDeleteStart={isViewingToday ? handleDeleteStart : undefined}
+            onSelectEntry={isViewingToday ? handleSelectEntry : undefined}
+            selectedEntryId={selectedEntry?.entry.id ?? null}
           />
 
           {/* Status Pills - Above action buttons */}
@@ -374,6 +442,52 @@ export function HomeScreen() {
               disabled={!customAmount}
             >
               <Text style={styles.inlineAddButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Entry Details Card - Inline with animation */}
+      {isViewingToday && !calendarExpanded && entryCardVisible && selectedEntry && (
+        <Animated.View
+          style={[
+            styles.entryCard,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+            },
+            {
+              opacity: entryCardAnim,
+              transform: [{
+                translateY: entryCardAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              }],
+            },
+          ]}
+        >
+          <View style={styles.entryCardContent}>
+            <View style={styles.entryCardInfo}>
+              <Text style={[styles.entryCardAmount, { color: colors.text }]}>
+                {mlToDisplay(selectedEntry.entry.amountMl, settings.unitSystem)}
+              </Text>
+              <Text style={[styles.entryCardTime, { color: colors.textSecondary }]}>
+                {formatTime(selectedEntry.entry.timestamp)}
+              </Text>
+              <Text style={[styles.entryCardIndex, { color: colors.textTertiary }]}>
+                Entry {selectedEntry.index + 1} of {todayLog.entries.length}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.entryCardDeleteButton,
+                { backgroundColor: isDark ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)' },
+              ]}
+              onPress={handleDeleteSelectedEntry}
+              activeOpacity={0.7}
+            >
+              <TrashIcon size={22} color="#FF3B30" />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -693,6 +807,47 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 5,
+  },
+  entryCard: {
+    marginHorizontal: 24,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  entryCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  entryCardInfo: {
+    flex: 1,
+  },
+  entryCardAmount: {
+    fontSize: 28,
+    fontWeight: '600',
+    letterSpacing: -0.5,
+  },
+  entryCardTime: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  entryCardIndex: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+  entryCardDeleteButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   customInputRow: {
     flexDirection: 'row',

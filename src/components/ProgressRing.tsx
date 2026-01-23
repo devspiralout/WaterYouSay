@@ -20,16 +20,14 @@ interface ProgressRingProps {
   unitSystem?: 'metric' | 'imperial';
   onDeleteEntry?: (entryId: string) => void;
   onDeleteStart?: () => void;
+  onSelectEntry?: (entry: WaterEntry, index: number) => void;
+  selectedEntryId?: string | null;
 }
 
 export interface ProgressRingRef {
   clearSelection: () => void;
 }
 
-interface SelectedSegment {
-  entry: WaterEntry;
-  index: number;
-}
 
 export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   progress,
@@ -43,9 +41,10 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   unitSystem = 'metric',
   onDeleteEntry,
   onDeleteStart,
+  onSelectEntry,
+  selectedEntryId,
 }, ref) => {
   const { colors } = useTheme();
-  const [selectedSegment, setSelectedSegment] = useState<SelectedSegment | null>(null);
   const [animatedProgress, setAnimatedProgress] = useState(progress);
   const animationRef = useRef(new Animated.Value(progress)).current;
 
@@ -58,7 +57,11 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
 
   // Expose clearSelection method to parent
   useImperativeHandle(ref, () => ({
-    clearSelection: () => setSelectedSegment(null),
+    clearSelection: () => {
+      if (entries.length > 0) {
+        onSelectEntry?.(entries[0], -1);
+      }
+    },
   }));
 
   const expandedStrokeWidth = strokeWidth + 6;
@@ -94,9 +97,8 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   }, [progress, animationRef]);
 
 
-  // Clear selection and justDeletedId when entries change
+  // Clear justDeletedId when entries change
   useEffect(() => {
-    setSelectedSegment(null);
     setJustDeletedId(null);
   }, [entries]);
 
@@ -180,14 +182,11 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     if (deletingSegmentId) return;
 
     lightTap();
-    if (selectedSegment?.index === segment.index) {
+    if (selectedEntryId === segment.entry.id) {
       // Deselect if tapping same segment
-      setSelectedSegment(null);
+      onSelectEntry?.(segment.entry, -1); // -1 signals deselection
     } else {
-      setSelectedSegment({
-        entry: segment.entry,
-        index: segment.index,
-      });
+      onSelectEntry?.(segment.entry, segment.index);
     }
   };
 
@@ -199,7 +198,8 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
     onDeleteStart?.();
     setDeletingSegmentId(segment.entry.id);
     setDeletingSegmentIndex(segment.index);
-    setSelectedSegment(null);
+    // Clear selection via parent callback
+    onSelectEntry?.(segment.entry, -1);
 
     // Reset animation value for new delete
     deleteAnimProgress.setValue(0);
@@ -236,8 +236,9 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   }, [onDeleteEntry, onDeleteStart, deletingSegmentId, deleteAnimProgress]);
 
   const handleContainerPress = () => {
-    if (selectedSegment) {
-      setSelectedSegment(null);
+    if (selectedEntryId) {
+      // Deselect by passing null entry
+      onSelectEntry?.(entries[0], -1);
     }
   };
 
@@ -255,26 +256,12 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
   const goalDisplay = hasAdjustment ? `of ${baseGoalAmount} (${goalAmount})` : `of ${goalAmount}`;
 
   const centerContent = useMemo(() => {
-    if (selectedSegment) {
-      return {
-        main: mlToDisplay(selectedSegment.entry.amountMl, unitSystem),
-        sub: formatTime(selectedSegment.entry.timestamp),
-        detail: `Entry ${selectedSegment.index + 1} of ${entries.length}`,
-      };
-    }
-    if (goalMet) {
-      return {
-        main: currentAmount,
-        sub: goalDisplay,
-        detail: entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : '',
-      };
-    }
     return {
       main: currentAmount,
       sub: goalDisplay,
       detail: entries.length > 0 ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` : '',
     };
-  }, [selectedSegment, currentAmount, goalDisplay, entries.length, unitSystem, goalMet]);
+  }, [currentAmount, goalDisplay, entries.length]);
 
   return (
     <TouchableOpacity
@@ -296,13 +283,13 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
 
           {/* Entry segments - non-selected, non-deleting */}
           {segments.map((segment) => {
-            const isSelected = selectedSegment?.index === segment.index;
+            const isSelected = selectedEntryId === segment.entry.id;
             const isDeleting = deletingSegmentId === segment.entry.id;
             const isJustDeleted = justDeletedId === segment.entry.id;
             if (isSelected || isDeleting || isJustDeleted) return null; // Render these last or not at all
 
             // Dim segments when one is selected or being deleted
-            const isDimmed = selectedSegment || deletingSegmentId;
+            const isDimmed = selectedEntryId || deletingSegmentId;
 
             const { startAngle, sweepAngle } = segment;
 
@@ -315,15 +302,14 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
                 strokeLinecap="butt"
                 fill="none"
                 onPress={() => handleSegmentPress(segment)}
-                onLongPress={() => handleSegmentLongPress(segment)}
-                delayLongPress={400}
               />
             );
           })}
 
           {/* Selected segment - rendered on top */}
-          {selectedSegment && segments[selectedSegment.index] && !deletingSegmentId && (() => {
-            const segment = segments[selectedSegment.index];
+          {selectedEntryId && !deletingSegmentId && (() => {
+            const segment = segments.find(s => s.entry.id === selectedEntryId);
+            if (!segment) return null;
             const { startAngle, sweepAngle } = segment;
 
             return (
@@ -334,8 +320,6 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
                 strokeLinecap="butt"
                 fill="none"
                 onPress={() => handleSegmentPress(segment)}
-                onLongPress={() => handleSegmentLongPress(segment)}
-                delayLongPress={400}
               />
             );
           })()}
@@ -394,8 +378,7 @@ export const ProgressRing = forwardRef<ProgressRingRef, ProgressRingProps>(({
           <Text
             style={[
               styles.currentAmount,
-              { color: selectedSegment ? colors.primary : colors.text },
-              selectedSegment && styles.selectedAmount,
+              { color: colors.text },
             ]}
           >
             {centerContent.main}
