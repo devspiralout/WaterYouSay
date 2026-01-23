@@ -447,49 +447,116 @@ export function HomeScreen() {
         </Animated.View>
       )}
 
-      {/* Entry Details Card - Inline with animation */}
+      {/* Entry Details Carousel - Centered with prev/next faded */}
       {isViewingToday && !calendarExpanded && entryCardVisible && selectedEntry && (
         <Animated.View
           style={[
-            styles.entryCard,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
-            },
+            styles.entryCarousel,
             {
               opacity: entryCardAnim,
               transform: [{
                 translateY: entryCardAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [20, 0],
+                  outputRange: [30, 0],
                 }),
               }],
             },
           ]}
         >
-          <View style={styles.entryCardContent}>
-            <View style={styles.entryCardInfo}>
-              <Text style={[styles.entryCardAmount, { color: colors.text }]}>
-                {mlToDisplay(selectedEntry.entry.amountMl, settings.unitSystem)}
-              </Text>
-              <Text style={[styles.entryCardTime, { color: colors.textSecondary }]}>
-                {formatTime(selectedEntry.entry.timestamp)}
-              </Text>
-              <Text style={[styles.entryCardIndex, { color: colors.textTertiary }]}>
-                Entry {selectedEntry.index + 1} of {todayLog.entries.length}
-              </Text>
-            </View>
+          {/* Previous entry - faded */}
+          {selectedEntry.index > 0 && (
             <TouchableOpacity
-              style={[
-                styles.entryCardDeleteButton,
-                { backgroundColor: isDark ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)' },
-              ]}
-              onPress={handleDeleteSelectedEntry}
+              style={styles.entryCardFaded}
+              onPress={() => {
+                lightTap();
+                const prevEntry = todayLog.entries[selectedEntry.index - 1];
+                handleSelectEntry(prevEntry, selectedEntry.index - 1);
+              }}
               activeOpacity={0.7}
             >
-              <TrashIcon size={22} color="#FF3B30" />
+              <View
+                style={[
+                  styles.entryCardSmall,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.5)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                  },
+                ]}
+              >
+                <Text style={[styles.entryCardSmallAmount, { color: colors.textTertiary }]}>
+                  {mlToDisplay(todayLog.entries[selectedEntry.index - 1].amountMl, settings.unitSystem)}
+                </Text>
+                <Text style={[styles.entryCardSmallTime, { color: colors.textTertiary }]}>
+                  {formatTime(todayLog.entries[selectedEntry.index - 1].timestamp)}
+                </Text>
+              </View>
             </TouchableOpacity>
+          )}
+
+          {/* Current entry - main card */}
+          <View
+            style={[
+              styles.entryCard,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+              },
+            ]}
+          >
+            <View style={styles.entryCardContent}>
+              <View style={styles.entryCardInfo}>
+                <Text style={[styles.entryCardAmount, { color: colors.text }]}>
+                  {mlToDisplay(selectedEntry.entry.amountMl, settings.unitSystem)}
+                </Text>
+                <Text style={[styles.entryCardTime, { color: colors.textSecondary }]}>
+                  {formatTime(selectedEntry.entry.timestamp)}
+                </Text>
+                <Text style={[styles.entryCardIndex, { color: colors.textTertiary }]}>
+                  Entry {selectedEntry.index + 1} of {todayLog.entries.length}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.entryCardDeleteButton,
+                  { backgroundColor: isDark ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)' },
+                ]}
+                onPress={handleDeleteSelectedEntry}
+                activeOpacity={0.7}
+              >
+                <TrashIcon size={22} color="#FF3B30" />
+              </TouchableOpacity>
+            </View>
           </View>
+
+          {/* Next entry - faded */}
+          {selectedEntry.index < todayLog.entries.length - 1 && (
+            <TouchableOpacity
+              style={styles.entryCardFaded}
+              onPress={() => {
+                lightTap();
+                const nextEntry = todayLog.entries[selectedEntry.index + 1];
+                handleSelectEntry(nextEntry, selectedEntry.index + 1);
+              }}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.entryCardSmall,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.5)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                  },
+                ]}
+              >
+                <Text style={[styles.entryCardSmallAmount, { color: colors.textTertiary }]}>
+                  {mlToDisplay(todayLog.entries[selectedEntry.index + 1].amountMl, settings.unitSystem)}
+                </Text>
+                <Text style={[styles.entryCardSmallTime, { color: colors.textTertiary }]}>
+                  {formatTime(todayLog.entries[selectedEntry.index + 1].timestamp)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       )}
 
@@ -808,9 +875,34 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 5,
   },
+  entryCarousel: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  entryCardFaded: {
+    width: '100%',
+    opacity: 0.5,
+  },
+  entryCardSmall: {
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  entryCardSmallAmount: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  entryCardSmallTime: {
+    fontSize: 14,
+  },
   entryCard: {
-    marginHorizontal: 24,
-    marginBottom: 16,
+    width: '100%',
     padding: 16,
     borderRadius: 20,
     borderWidth: 1,
