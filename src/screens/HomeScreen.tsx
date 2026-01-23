@@ -97,6 +97,7 @@ export function HomeScreen() {
 
   // Animation for entry details card
   const entryCardAnim = useRef(new Animated.Value(0)).current;
+  const carouselSlideAnim = useRef(new Animated.Value(0)).current;
   const [selectedEntry, setSelectedEntry] = useState<{ entry: WaterEntry; index: number } | null>(null);
   const [entryCardVisible, setEntryCardVisible] = useState(false);
 
@@ -108,6 +109,7 @@ export function HomeScreen() {
       }
       setSelectedEntry(entry);
       setEntryCardVisible(true);
+      carouselSlideAnim.setValue(0);
       Animated.timing(entryCardAnim, {
         toValue: 1,
         duration: 250,
@@ -127,10 +129,30 @@ export function HomeScreen() {
     }
   };
 
+  const navigateCarousel = (newIndex: number) => {
+    if (!selectedEntry) return;
+    const direction = newIndex > selectedEntry.index ? -1 : 1;
+
+    // Animate slide
+    Animated.timing(carouselSlideAnim, {
+      toValue: direction,
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      // Update selection and reset animation
+      setSelectedEntry({ entry: todayLog.entries[newIndex], index: newIndex });
+      carouselSlideAnim.setValue(0);
+    });
+  };
+
   const handleSelectEntry = (entry: WaterEntry, index: number) => {
     if (index === -1) {
       // Deselect
       toggleEntryCard(null);
+    } else if (selectedEntry && entryCardVisible) {
+      // Navigate within carousel
+      navigateCarousel(index);
     } else {
       toggleEntryCard({ entry, index });
     }
@@ -447,7 +469,7 @@ export function HomeScreen() {
         </Animated.View>
       )}
 
-      {/* Entry Details Carousel - Horizontal with prev/next faded */}
+      {/* Entry Details Carousel - 3D style with cards tucked behind */}
       {isViewingToday && !calendarExpanded && entryCardVisible && selectedEntry && (
         <Animated.View
           style={[
@@ -457,51 +479,87 @@ export function HomeScreen() {
               transform: [{
                 translateY: entryCardAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [20, 0],
+                  outputRange: [30, 0],
                 }),
               }],
             },
           ]}
         >
-          {/* Previous entry - faded left */}
-          {selectedEntry.index > 0 ? (
-            <TouchableOpacity
-              style={styles.entryCardSide}
-              onPress={() => {
-                lightTap();
-                const prevEntry = todayLog.entries[selectedEntry.index - 1];
-                handleSelectEntry(prevEntry, selectedEntry.index - 1);
-              }}
-              activeOpacity={0.7}
+          {/* Previous entry - tucked behind left */}
+          {selectedEntry.index > 0 && (
+            <Animated.View
+              style={[
+                styles.entryCardBehind,
+                styles.entryCardBehindLeft,
+                {
+                  transform: [
+                    {
+                      translateX: carouselSlideAnim.interpolate({
+                        inputRange: [-1, 0, 1],
+                        outputRange: [0, 0, 80],
+                      }),
+                    },
+                    {
+                      scale: carouselSlideAnim.interpolate({
+                        inputRange: [-1, 0, 1],
+                        outputRange: [0.85, 0.85, 1],
+                      }),
+                    },
+                  ],
+                  opacity: carouselSlideAnim.interpolate({
+                    inputRange: [-1, 0, 1],
+                    outputRange: [0, 0.5, 1],
+                  }),
+                },
+              ]}
             >
-              <View
+              <TouchableOpacity
                 style={[
                   styles.entryCardSmall,
                   {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.5)',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.6)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)',
                   },
                 ]}
+                onPress={() => {
+                  lightTap();
+                  handleSelectEntry(todayLog.entries[selectedEntry.index - 1], selectedEntry.index - 1);
+                }}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.entryCardSmallAmount, { color: colors.textTertiary }]}>
+                <Text style={[styles.entryCardSmallAmount, { color: colors.textSecondary }]}>
                   {mlToDisplay(todayLog.entries[selectedEntry.index - 1].amountMl, settings.unitSystem)}
                 </Text>
                 <Text style={[styles.entryCardSmallTime, { color: colors.textTertiary }]}>
                   {formatTime(todayLog.entries[selectedEntry.index - 1].timestamp)}
                 </Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.entryCardSide} />
+              </TouchableOpacity>
+            </Animated.View>
           )}
 
-          {/* Current entry - main card */}
-          <View
+          {/* Current entry - main card in front */}
+          <Animated.View
             style={[
-              styles.entryCard,
+              styles.entryCardMain,
               {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.9)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.08)',
+              },
+              {
+                transform: [
+                  {
+                    translateX: carouselSlideAnim.interpolate({
+                      inputRange: [-1, 0, 1],
+                      outputRange: [-120, 0, 120],
+                    }),
+                  },
+                  {
+                    scale: carouselSlideAnim.interpolate({
+                      inputRange: [-1, 0, 1],
+                      outputRange: [0.9, 1, 0.9],
+                    }),
+                  },
+                ],
               },
             ]}
           >
@@ -523,41 +581,61 @@ export function HomeScreen() {
                 onPress={handleDeleteSelectedEntry}
                 activeOpacity={0.7}
               >
-                <TrashIcon size={18} color="#FF3B30" />
+                <TrashIcon size={20} color="#FF3B30" />
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
 
-          {/* Next entry - faded right */}
-          {selectedEntry.index < todayLog.entries.length - 1 ? (
-            <TouchableOpacity
-              style={styles.entryCardSide}
-              onPress={() => {
-                lightTap();
-                const nextEntry = todayLog.entries[selectedEntry.index + 1];
-                handleSelectEntry(nextEntry, selectedEntry.index + 1);
-              }}
-              activeOpacity={0.7}
+          {/* Next entry - tucked behind right */}
+          {selectedEntry.index < todayLog.entries.length - 1 && (
+            <Animated.View
+              style={[
+                styles.entryCardBehind,
+                styles.entryCardBehindRight,
+                {
+                  transform: [
+                    {
+                      translateX: carouselSlideAnim.interpolate({
+                        inputRange: [-1, 0, 1],
+                        outputRange: [-80, 0, 0],
+                      }),
+                    },
+                    {
+                      scale: carouselSlideAnim.interpolate({
+                        inputRange: [-1, 0, 1],
+                        outputRange: [1, 0.85, 0.85],
+                      }),
+                    },
+                  ],
+                  opacity: carouselSlideAnim.interpolate({
+                    inputRange: [-1, 0, 1],
+                    outputRange: [1, 0.5, 0],
+                  }),
+                },
+              ]}
             >
-              <View
+              <TouchableOpacity
                 style={[
                   styles.entryCardSmall,
                   {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.5)',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.6)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)',
                   },
                 ]}
+                onPress={() => {
+                  lightTap();
+                  handleSelectEntry(todayLog.entries[selectedEntry.index + 1], selectedEntry.index + 1);
+                }}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.entryCardSmallAmount, { color: colors.textTertiary }]}>
+                <Text style={[styles.entryCardSmallAmount, { color: colors.textSecondary }]}>
                   {mlToDisplay(todayLog.entries[selectedEntry.index + 1].amountMl, settings.unitSystem)}
                 </Text>
                 <Text style={[styles.entryCardSmallTime, { color: colors.textTertiary }]}>
                   {formatTime(todayLog.entries[selectedEntry.index + 1].timestamp)}
                 </Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.entryCardSide} />
+              </TouchableOpacity>
+            </Animated.View>
           )}
         </Animated.View>
       )}
@@ -878,67 +956,77 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   entryCarousel: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    gap: 8,
     marginBottom: 16,
+    height: 140,
   },
-  entryCardSide: {
-    flex: 1,
-    opacity: 0.6,
+  entryCardBehind: {
+    position: 'absolute',
+    width: 140,
+  },
+  entryCardBehindLeft: {
+    left: 16,
+  },
+  entryCardBehindRight: {
+    right: 16,
   },
   entryCardSmall: {
-    padding: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  entryCardSmallAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  entryCardSmallTime: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  entryCard: {
-    flex: 1.5,
     padding: 14,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  entryCardSmallAmount: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  entryCardSmallTime: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  entryCardMain: {
+    width: 200,
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 6,
+    zIndex: 10,
   },
   entryCardAmount: {
-    fontSize: 22,
+    fontSize: 32,
     fontWeight: '600',
     letterSpacing: -0.5,
   },
   entryCardTime: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 4,
   },
   entryCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 8,
+    marginTop: 12,
   },
   entryCardIndex: {
-    fontSize: 12,
+    fontSize: 13,
   },
   entryCardDeleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
