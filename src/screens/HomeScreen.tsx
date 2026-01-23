@@ -133,16 +133,24 @@ export function HomeScreen() {
     if (!selectedEntry) return;
     const direction = newIndex > selectedEntry.index ? -1 : 1;
 
-    // Animate slide
+    // Animate slide out
     Animated.timing(carouselSlideAnim, {
       toValue: direction,
-      duration: 250,
-      easing: Easing.out(Easing.cubic),
+      duration: 180,
+      easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      // Update selection and reset animation
+      // Update selection and set animation to opposite side
       setSelectedEntry({ entry: todayLog.entries[newIndex], index: newIndex });
-      carouselSlideAnim.setValue(0);
+      carouselSlideAnim.setValue(-direction);
+
+      // Animate slide in from opposite direction
+      Animated.spring(carouselSlideAnim, {
+        toValue: 0,
+        tension: 80,
+        friction: 12,
+        useNativeDriver: true,
+      }).start();
     });
   };
 
