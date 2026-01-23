@@ -447,7 +447,7 @@ export function HomeScreen() {
         </Animated.View>
       )}
 
-      {/* Entry Details Carousel - Centered with prev/next faded */}
+      {/* Entry Details Carousel - Horizontal with prev/next faded */}
       {isViewingToday && !calendarExpanded && entryCardVisible && selectedEntry && (
         <Animated.View
           style={[
@@ -457,16 +457,16 @@ export function HomeScreen() {
               transform: [{
                 translateY: entryCardAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [30, 0],
+                  outputRange: [20, 0],
                 }),
               }],
             },
           ]}
         >
-          {/* Previous entry - faded */}
-          {selectedEntry.index > 0 && (
+          {/* Previous entry - faded left */}
+          {selectedEntry.index > 0 ? (
             <TouchableOpacity
-              style={styles.entryCardFaded}
+              style={styles.entryCardSide}
               onPress={() => {
                 lightTap();
                 const prevEntry = todayLog.entries[selectedEntry.index - 1];
@@ -491,6 +491,8 @@ export function HomeScreen() {
                 </Text>
               </View>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.entryCardSide} />
           )}
 
           {/* Current entry - main card */}
@@ -503,18 +505,16 @@ export function HomeScreen() {
               },
             ]}
           >
-            <View style={styles.entryCardContent}>
-              <View style={styles.entryCardInfo}>
-                <Text style={[styles.entryCardAmount, { color: colors.text }]}>
-                  {mlToDisplay(selectedEntry.entry.amountMl, settings.unitSystem)}
-                </Text>
-                <Text style={[styles.entryCardTime, { color: colors.textSecondary }]}>
-                  {formatTime(selectedEntry.entry.timestamp)}
-                </Text>
-                <Text style={[styles.entryCardIndex, { color: colors.textTertiary }]}>
-                  Entry {selectedEntry.index + 1} of {todayLog.entries.length}
-                </Text>
-              </View>
+            <Text style={[styles.entryCardAmount, { color: colors.text }]}>
+              {mlToDisplay(selectedEntry.entry.amountMl, settings.unitSystem)}
+            </Text>
+            <Text style={[styles.entryCardTime, { color: colors.textSecondary }]}>
+              {formatTime(selectedEntry.entry.timestamp)}
+            </Text>
+            <View style={styles.entryCardFooter}>
+              <Text style={[styles.entryCardIndex, { color: colors.textTertiary }]}>
+                {selectedEntry.index + 1} / {todayLog.entries.length}
+              </Text>
               <TouchableOpacity
                 style={[
                   styles.entryCardDeleteButton,
@@ -523,15 +523,15 @@ export function HomeScreen() {
                 onPress={handleDeleteSelectedEntry}
                 activeOpacity={0.7}
               >
-                <TrashIcon size={22} color="#FF3B30" />
+                <TrashIcon size={18} color="#FF3B30" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Next entry - faded */}
-          {selectedEntry.index < todayLog.entries.length - 1 && (
+          {/* Next entry - faded right */}
+          {selectedEntry.index < todayLog.entries.length - 1 ? (
             <TouchableOpacity
-              style={styles.entryCardFaded}
+              style={styles.entryCardSide}
               onPress={() => {
                 lightTap();
                 const nextEntry = todayLog.entries[selectedEntry.index + 1];
@@ -556,6 +556,8 @@ export function HomeScreen() {
                 </Text>
               </View>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.entryCardSide} />
           )}
         </Animated.View>
       )}
@@ -876,68 +878,67 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   entryCarousel: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    gap: 8,
-  },
-  entryCardFaded: {
-    width: '100%',
-    opacity: 0.5,
-  },
-  entryCardSmall: {
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    gap: 8,
+    marginBottom: 16,
+  },
+  entryCardSide: {
+    flex: 1,
+    opacity: 0.6,
+  },
+  entryCardSmall: {
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
   },
   entryCardSmallAmount: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   entryCardSmallTime: {
-    fontSize: 14,
+    fontSize: 11,
+    marginTop: 2,
   },
   entryCard: {
-    width: '100%',
-    padding: 16,
-    borderRadius: 20,
+    flex: 1.5,
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  entryCardContent: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  entryCardInfo: {
-    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   entryCardAmount: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '600',
     letterSpacing: -0.5,
   },
   entryCardTime: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '500',
     marginTop: 2,
   },
+  entryCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 8,
+  },
   entryCardIndex: {
-    fontSize: 13,
-    marginTop: 4,
+    fontSize: 12,
   },
   entryCardDeleteButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
