@@ -129,9 +129,8 @@ export function HomeScreen() {
     }
   };
 
-  const navigateCarousel = (newIndex: number) => {
-    if (!selectedEntry) return;
-    const direction = newIndex > selectedEntry.index ? -1 : 1;
+  const navigateCarousel = (newIndex: number, direction: number) => {
+    if (!selectedEntry || todayLog.entries.length <= 1) return;
 
     // Animate slide out
     Animated.timing(carouselSlideAnim, {
@@ -154,13 +153,24 @@ export function HomeScreen() {
     });
   };
 
+  // Get prev/next indices with wrapping
+  const getPrevIndex = (currentIndex: number) => {
+    return currentIndex === 0 ? todayLog.entries.length - 1 : currentIndex - 1;
+  };
+
+  const getNextIndex = (currentIndex: number) => {
+    return currentIndex === todayLog.entries.length - 1 ? 0 : currentIndex + 1;
+  };
+
   const handleSelectEntry = (entry: WaterEntry, index: number) => {
     if (index === -1) {
       // Deselect
       toggleEntryCard(null);
     } else if (selectedEntry && entryCardVisible) {
-      // Navigate within carousel
-      navigateCarousel(index);
+      // Navigate within carousel - determine direction
+      const isPrev = index === getPrevIndex(selectedEntry.index);
+      const direction = isPrev ? 1 : -1;
+      navigateCarousel(index, direction);
     } else {
       toggleEntryCard({ entry, index });
     }
@@ -494,7 +504,7 @@ export function HomeScreen() {
           ]}
         >
           {/* Previous entry - tucked behind left */}
-          {selectedEntry.index > 0 && (
+          {todayLog.entries.length > 1 && (
             <Animated.View
               style={[
                 styles.entryCardBehind,
@@ -531,15 +541,16 @@ export function HomeScreen() {
                 ]}
                 onPress={() => {
                   lightTap();
-                  handleSelectEntry(todayLog.entries[selectedEntry.index - 1], selectedEntry.index - 1);
+                  const prevIdx = getPrevIndex(selectedEntry.index);
+                  handleSelectEntry(todayLog.entries[prevIdx], prevIdx);
                 }}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.entryCardSmallAmount, { color: colors.textSecondary }]}>
-                  {mlToDisplay(todayLog.entries[selectedEntry.index - 1].amountMl, settings.unitSystem)}
+                  {mlToDisplay(todayLog.entries[getPrevIndex(selectedEntry.index)].amountMl, settings.unitSystem)}
                 </Text>
                 <Text style={[styles.entryCardSmallTime, { color: colors.textTertiary }]}>
-                  {formatTime(todayLog.entries[selectedEntry.index - 1].timestamp)}
+                  {formatTime(todayLog.entries[getPrevIndex(selectedEntry.index)].timestamp)}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -595,7 +606,7 @@ export function HomeScreen() {
           </Animated.View>
 
           {/* Next entry - tucked behind right */}
-          {selectedEntry.index < todayLog.entries.length - 1 && (
+          {todayLog.entries.length > 1 && (
             <Animated.View
               style={[
                 styles.entryCardBehind,
@@ -632,15 +643,16 @@ export function HomeScreen() {
                 ]}
                 onPress={() => {
                   lightTap();
-                  handleSelectEntry(todayLog.entries[selectedEntry.index + 1], selectedEntry.index + 1);
+                  const nextIdx = getNextIndex(selectedEntry.index);
+                  handleSelectEntry(todayLog.entries[nextIdx], nextIdx);
                 }}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.entryCardSmallAmount, { color: colors.textSecondary }]}>
-                  {mlToDisplay(todayLog.entries[selectedEntry.index + 1].amountMl, settings.unitSystem)}
+                  {mlToDisplay(todayLog.entries[getNextIndex(selectedEntry.index)].amountMl, settings.unitSystem)}
                 </Text>
                 <Text style={[styles.entryCardSmallTime, { color: colors.textTertiary }]}>
-                  {formatTime(todayLog.entries[selectedEntry.index + 1].timestamp)}
+                  {formatTime(todayLog.entries[getNextIndex(selectedEntry.index)].timestamp)}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
