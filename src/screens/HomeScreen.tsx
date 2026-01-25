@@ -125,12 +125,7 @@ export function HomeScreen() {
 
   const toggleAddCard = (expand: boolean) => {
     if (expand) {
-      // Close entry card first if open, then open add card
-      if (entryCardVisible) {
-        closeEntryCard(() => openAddCard());
-      } else {
-        openAddCard();
-      }
+      openAddCard();
     } else {
       closeAddCard();
     }
@@ -138,12 +133,7 @@ export function HomeScreen() {
 
   const toggleEntryCard = (entry: { entry: WaterEntry; index: number } | null) => {
     if (entry) {
-      // Close add card first if open, then open entry card
-      if (addCardVisible) {
-        closeAddCard(() => openEntryCard(entry));
-      } else {
-        openEntryCard(entry);
-      }
+      openEntryCard(entry);
     } else {
       closeEntryCard();
     }
@@ -438,246 +428,139 @@ export function HomeScreen() {
         {!isViewingToday && <View style={styles.bottomSpacer} />}
       </View>
 
-      {/* Add Water Card - Inline with animation */}
-      {isViewingToday && !calendarExpanded && addCardVisible && (
-        <Animated.View
-          style={[
-            styles.addCard,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
-            },
-            {
-              opacity: addCardAnim,
-              transform: [{
-                translateY: addCardAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              }],
-            },
-          ]}
-        >
-          <View style={styles.quickAddRow}>
-            {quickAddAmounts.map(({ ml, display }) => (
-              <TouchableOpacity
-                key={ml}
-                style={[
-                  styles.quickAddOption,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-                  },
-                ]}
-                onPress={() => handleQuickAdd(ml)}
-              >
-                <Text style={[styles.quickAddOptionText, { color: colors.text }]}>{display}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.customInputRow}>
-            <TextInput
-              style={[
-                styles.inlineCustomInput,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-                  color: colors.text,
-                },
-              ]}
-              value={customAmount}
-              onChangeText={setCustomAmount}
-              keyboardType="numeric"
-              placeholder="Custom"
-              placeholderTextColor={colors.textTertiary}
-            />
-            <Text style={[styles.customUnit, { color: colors.textTertiary }]}>
-              {settings.unitSystem === 'metric' ? 'ml' : 'oz'}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.inlineAddButton,
-                { backgroundColor: customAmount ? colors.primary : colors.border }
-              ]}
-              onPress={handleCustomAdd}
-              disabled={!customAmount}
-            >
-              <Text style={styles.inlineAddButtonText}>Add</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      )}
-
-      {/* Entry Details Carousel - 3D style with cards tucked behind */}
-      {isViewingToday && !calendarExpanded && entryCardVisible && selectedEntry && (
-        <Animated.View
-          style={[
-            styles.entryCarousel,
-            {
-              opacity: entryCardAnim,
-              transform: [{
-                translateY: entryCardAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [30, 0],
-                }),
-              }],
-            },
-          ]}
-        >
-          {/* Previous entry - tucked behind left */}
-          {todayLog.entries.length > 1 && (
+      {/* Pills Container - Fixed height with absolute positioned slots */}
+      {isViewingToday && !calendarExpanded && (entryCardVisible || addCardVisible) && (
+        <View style={[styles.pillsContainer, { height: entryCardVisible ? 116 : 56 }]}>
+          {/* Entry Details - Upper position (absolute) */}
+          {entryCardVisible && selectedEntry && (
             <Animated.View
               style={[
-                styles.entryCardBehind,
-                styles.entryCardBehindLeft,
+                styles.entryPillAbsolute,
                 {
-                  transform: [
-                    {
-                      translateX: carouselSlideAnim.interpolate({
-                        inputRange: [-1, 0, 1],
-                        outputRange: [0, 0, 80],
-                      }),
-                    },
-                    {
-                      scale: carouselSlideAnim.interpolate({
-                        inputRange: [-1, 0, 1],
-                        outputRange: [0.85, 0.85, 1],
-                      }),
-                    },
-                  ],
-                  opacity: carouselSlideAnim.interpolate({
-                    inputRange: [-1, 0, 1],
-                    outputRange: [0, 0.5, 1],
-                  }),
+                  opacity: entryCardAnim,
+                  transform: [{
+                    translateY: entryCardAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [10, 0],
+                    }),
+                  }],
                 },
               ]}
             >
-              <TouchableOpacity
-                style={[
-                  styles.entryCardSmall,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.6)',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)',
-                  },
-                ]}
-                onPress={() => {
-                  lightTap();
-                  const prevIdx = getPrevIndex(selectedEntry.index);
-                  handleSelectEntry(todayLog.entries[prevIdx], prevIdx);
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.entryCardSmallAmount, { color: colors.textSecondary }]}>
-                  {mlToDisplay(todayLog.entries[getPrevIndex(selectedEntry.index)].amountMl, settings.unitSystem)}
-                </Text>
-                <Text style={[styles.entryCardSmallTime, { color: colors.textTertiary }]}>
-                  {formatTime(todayLog.entries[getPrevIndex(selectedEntry.index)].timestamp)}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.entryPillRow}>
+                {/* Previous button */}
+                {todayLog.entries.length > 1 && (
+                  <TouchableOpacity
+                    style={styles.entryNavButton}
+                    onPress={() => {
+                      lightTap();
+                      const prevIdx = getPrevIndex(selectedEntry.index);
+                      navigateCarousel(prevIdx, 1);
+                    }}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={[styles.entryNavButtonText, { color: colors.textTertiary }]}>‹</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Main entry pill */}
+                <Animated.View
+                  style={[
+                    styles.entryPill,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                    },
+                    {
+                      transform: [{
+                        scale: carouselSlideAnim.interpolate({
+                          inputRange: [-1, 0, 1],
+                          outputRange: [0.95, 1, 0.95],
+                        }),
+                      }],
+                    },
+                  ]}
+                >
+                  <Text style={[styles.entryPillAmount, { color: colors.text }]}>
+                    {mlToDisplay(selectedEntry.entry.amountMl, settings.unitSystem)}
+                  </Text>
+                  <Text style={[styles.entryPillTime, { color: colors.textSecondary }]}>
+                    {formatTime(selectedEntry.entry.timestamp)}
+                  </Text>
+                  <Text style={[styles.entryPillIndex, { color: colors.textTertiary }]}>
+                    {selectedEntry.index + 1}/{todayLog.entries.length}
+                  </Text>
+                </Animated.View>
+
+                {/* Next button */}
+                {todayLog.entries.length > 1 && (
+                  <TouchableOpacity
+                    style={styles.entryNavButton}
+                    onPress={() => {
+                      lightTap();
+                      const nextIdx = getNextIndex(selectedEntry.index);
+                      navigateCarousel(nextIdx, -1);
+                    }}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={[styles.entryNavButtonText, { color: colors.textTertiary }]}>›</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Delete button */}
+                <TouchableOpacity
+                  style={[
+                    styles.entryDeletePill,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255, 59, 48, 0.1)',
+                    },
+                  ]}
+                  onPress={handleDeleteSelectedEntry}
+                  activeOpacity={0.7}
+                >
+                  <TrashIcon size={16} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
             </Animated.View>
           )}
 
-          {/* Current entry - main card in front */}
-          <Animated.View
-            style={[
-              styles.entryCardMain,
-              {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.9)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.08)',
-              },
-              {
-                transform: [
-                  {
-                    translateX: carouselSlideAnim.interpolate({
-                      inputRange: [-1, 0, 1],
-                      outputRange: [-120, 0, 120],
-                    }),
-                  },
-                  {
-                    scale: carouselSlideAnim.interpolate({
-                      inputRange: [-1, 0, 1],
-                      outputRange: [0.9, 1, 0.9],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <Text style={[styles.entryCardAmount, { color: colors.text }]}>
-              {mlToDisplay(selectedEntry.entry.amountMl, settings.unitSystem)}
-            </Text>
-            <Text style={[styles.entryCardTime, { color: colors.textSecondary }]}>
-              {formatTime(selectedEntry.entry.timestamp)}
-            </Text>
-            <View style={styles.entryCardFooter}>
-              <Text style={[styles.entryCardIndex, { color: colors.textTertiary }]}>
-                {selectedEntry.index + 1} / {todayLog.entries.length}
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.entryCardDeleteButton,
-                  { backgroundColor: isDark ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)' },
-                ]}
-                onPress={handleDeleteSelectedEntry}
-                activeOpacity={0.7}
-              >
-                <TrashIcon size={20} color="#FF3B30" />
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-
-          {/* Next entry - tucked behind right */}
-          {todayLog.entries.length > 1 && (
+          {/* Quick Add - Lower position (absolute, always at bottom of container) */}
+          {addCardVisible && (
             <Animated.View
               style={[
-                styles.entryCardBehind,
-                styles.entryCardBehindRight,
+                styles.quickAddAbsolute,
                 {
-                  transform: [
-                    {
-                      translateX: carouselSlideAnim.interpolate({
-                        inputRange: [-1, 0, 1],
-                        outputRange: [-80, 0, 0],
-                      }),
-                    },
-                    {
-                      scale: carouselSlideAnim.interpolate({
-                        inputRange: [-1, 0, 1],
-                        outputRange: [1, 0.85, 0.85],
-                      }),
-                    },
-                  ],
-                  opacity: carouselSlideAnim.interpolate({
-                    inputRange: [-1, 0, 1],
-                    outputRange: [1, 0.5, 0],
-                  }),
+                  opacity: addCardAnim,
+                  transform: [{
+                    translateY: addCardAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [10, 0],
+                    }),
+                  }],
                 },
               ]}
             >
-              <TouchableOpacity
-                style={[
-                  styles.entryCardSmall,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.6)',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)',
-                  },
-                ]}
-                onPress={() => {
-                  lightTap();
-                  const nextIdx = getNextIndex(selectedEntry.index);
-                  handleSelectEntry(todayLog.entries[nextIdx], nextIdx);
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.entryCardSmallAmount, { color: colors.textSecondary }]}>
-                  {mlToDisplay(todayLog.entries[getNextIndex(selectedEntry.index)].amountMl, settings.unitSystem)}
-                </Text>
-                <Text style={[styles.entryCardSmallTime, { color: colors.textTertiary }]}>
-                  {formatTime(todayLog.entries[getNextIndex(selectedEntry.index)].timestamp)}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.quickAddRow}>
+                {quickAddAmounts.map(({ ml, display }) => (
+                  <TouchableOpacity
+                    key={ml}
+                    style={[
+                      styles.quickAddPill,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.7)',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                      },
+                    ]}
+                    onPress={() => handleQuickAdd(ml)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.quickAddPillText, { color: colors.text }]}>{display}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </Animated.View>
           )}
-        </Animated.View>
+        </View>
       )}
 
       {/* Bottom Action Buttons */}
@@ -995,78 +878,90 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 5,
   },
-  entryCarousel: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  pillsContainer: {
+    marginHorizontal: 24,
     marginBottom: 16,
-    height: 140,
+    position: 'relative',
   },
-  entryCardBehind: {
+  entryPillAbsolute: {
     position: 'absolute',
-    width: 140,
-  },
-  entryCardBehindLeft: {
-    left: 16,
-  },
-  entryCardBehindRight: {
-    right: 16,
-  },
-  entryCardSmall: {
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
+    top: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
+  },
+  quickAddAbsolute: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  quickAddPill: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  entryCardSmallAmount: {
-    fontSize: 18,
+  quickAddPillText: {
+    fontSize: 16,
     fontWeight: '600',
   },
-  entryCardSmallTime: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  entryCardMain: {
-    width: 200,
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
+  entryPillContainer: {
+    marginHorizontal: 24,
+    marginBottom: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 6,
-    zIndex: 10,
   },
-  entryCardAmount: {
-    fontSize: 32,
-    fontWeight: '600',
-    letterSpacing: -0.5,
-  },
-  entryCardTime: {
-    fontSize: 15,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  entryCardFooter: {
+  entryPillRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 12,
+    gap: 8,
   },
-  entryCardIndex: {
-    fontSize: 13,
+  entryNavButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  entryCardDeleteButton: {
-    width: 40,
-    height: 40,
+  entryNavButtonText: {
+    fontSize: 28,
+    fontWeight: '300',
+  },
+  entryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 20,
+    borderWidth: 1,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  entryPillAmount: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  entryPillTime: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  entryPillIndex: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  entryDeletePill: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
